@@ -1,0 +1,3 @@
+Le jeu de donées étant trop gros pour GitHub (457 Mo au lieu de 100), voici le lien Kaggle permettant de le télécharger (parmi les 4 jeux proposés, nous avons pris celui datant de mars 2025 nettoyé : games_march2025_cleaned)
+
+https://www.kaggle.com/datasets/artermiloff/steam-games-dataset
