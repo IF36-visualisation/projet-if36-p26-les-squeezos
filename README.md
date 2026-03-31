@@ -19,7 +19,7 @@ Il provient du site Kaggle, nous avons choisi ce jeu en particulier pour sa rich
 |:--------------------------------:|:------------------------:|:------:|:--------:|
 |                                  | appid                    | int    | discrète |
 |                                  | name                     | chr    | nominale |
-|                                  | release_date             | date   | discrète |
+|                                  | release_date             | date   | date     |
 |                                  | required_age             | int    | discrète |
 |                                  | price                    | num    | continue |
 |                                  | dlc_count                | int    | discrète |
@@ -75,10 +75,23 @@ Nos interrogations sont les suivantes :
 - Relation : Quelle est l’influence du nombre de langues supportées sur le nombre de ventes ? (“estimated_owners” et “supported_languages”)
 - Relation : Est-ce que les jeux payants sont mieux notés / Est-ce que le prix influence la qualité ? (“price” et “pct_pos_total”) 
 - Comparaison : Quels sont les "meilleurs" éditeurs ? (“pct_pos_total” et “publisher”)
-- Comparaison : Quel genre de jeu retient le plus l'attention des joueurs (voir avec le temps de jeu moyen) ? (“categories”/”genres” et “average_playtime_forever”, “mediam_playtime_forever”)
+- Comparaison : Quel genre de jeu retient le plus l'attention des joueurs (voir avec le temps de jeu moyen) ? (“categories”/”genres” et “average_playtime_forever”, “median_playtime_forever”)
 - Comparaison : Est-ce qu'on passe plus de temps sur des jeux gratuits ou payants ? (Temps passé sur des jeux gratuits et jeux payants (“average_playtime_forever” et “price”))
 - Comparaison : Y a-t-il des systèmes d’exploitation plus utilisés que d’autres ? (“Windows”, “Mac” et “Linux”)
-- Evolution : Y a-t-il une amélioration de la qualité des jeux au fil du temps ? (“release_date”, “pct_pos_total”)
+- Comparaison : Est-ce que les jeux Windows sont mieux notés que les jeux Mac ? (“pct_pos_total” et “Windows”, “Mac”)
+- Comparaison : Est-ce que les jeux qui n’ont pas de limite d’âge sont plus achetés que les autres ? (“estimated_owners” et “required_age”)
+- Comparaison : Est ce que le nombre de DLC influe sur le temps passé à jouer à un jeu ? (“dlc_count”, “average_playtime_forever”)
+- Comparaison : Est-ce que les jeux sans support ont des moins bonnes notes que les jeux avec support ? (“support_email”, “pct_pos_total”)
+- Comparaison : Quels sont les 3 meilleurs jeux Steam ? (“name”, “pct_pos_total”)
+- Comparaison : Quels sont les 3 pires jeux Steam ? (“name”, “pct_pos_total”)
+- Comparaison : Quels sont les 10 meilleurs jeux gratuits Steam ? (“name”, “pct_pos_total” et “price”)
+- Comparaison : Quels sont les 3 jeux les plus chers ? (“name”, “price”)
+- Évolution : Y a-t-il une amélioration de la qualité des jeux au fil du temps ? (“release_date”, “pct_pos_total”)
+- Évolution : Les joueurs préfèrent-ils acheter de “vieux” jeux ou des jeux récents (“estimated_owners” et “release_date”)
+- Répartition : Quels sont les genres de jeux les plus joués ? (“genre” et “estimated_owners”)
+- Répartition : Quels genres de jeux reçoivent le plus de reviews ? (“genre” et “reviews”)
+- Répartition : Quelles sont les langues les plus utilisées dans les jeux vidéos ? (“supported_languages” ou “full_audio_languages” et “appid”)
+- Comparaison et Répartition : Quels sont les jeux les plus joués par fourchette de joueurs ? (“estimated_owners”, “average_playtime_forever”)
 
 ## Informations obtenues
 
