@@ -13,7 +13,6 @@ library(dplyr)
 
 # Le fichier étant trop lourd pour GitHub, il n'est pas dans le dossier partagé, mais sur nos ordinateurs, d'où le '..' au lieu de 'data'
 jeux <- read.csv('../games_march2025_cleaned.csv')
-
 ```
 
 # Introduction
@@ -186,7 +185,7 @@ En parcourant les différentes variables du jeu de données, la mise en relation
 
 D'où la question suivante : 
 
-#### Est-ce que le prix influence la qualité ? "
+#### Est-ce que le prix influence la qualité ?
 
 Tout d'abord, pour répondre à la question, nous avons exploré le jeu de données pour voir s'il était cohérent de représenter dans son entièreté une graphique mettant en relation prix et avis positif des jeux. 
 
@@ -196,7 +195,7 @@ Tout d'abord, pour répondre à la question, nous avons exploré le jeu de donn�
 reviews_prix <- jeux %>% filter(pct_pos_total > 0)
 
 # Histogramme de la répartition du nombre de jeux en fonction du prix 
-ggplot(price_pos_reviews, mapping = aes(x = price)) + 
+ggplot(reviews_prix, mapping = aes(x = price)) + 
   geom_histogram() +
   labs(title = "Répartition du nombre de jeux en fonction du prix", x = "Prix ($)", y = "Nombre de jeux")
 ```
@@ -210,12 +209,13 @@ reviews_prix <- jeux %>% filter(pct_pos_total > 0, price < 70)
 
 # Graphique présentant la distribution des notes données aux jeux par tranche de prix. (Mettre en relation avec un nuage de points les avis positifs avec les prix rendait le tout illisible.)
 
-ggplot(price_pos_reviews, mapping = aes(x = cut(price, breaks = 14), y = pct_pos_total)) + # On sépare de manière à avoir des tranches de prix allant de 5 par 5
+ggplot(reviews_prix, mapping = aes(x = cut(price, breaks = 14), y = pct_pos_total)) + # On sépare de manière à avoir des tranches de prix allant de 5 par 5
   geom_boxplot() +
   labs(title = "Distribution des notes données aux jeux par tranche de prix", x = "Tranches de prix ($)", y = "Avis positifs (%)") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) # Les intervalles sont illisibles sinon
 
 ```
+
 On voit d'après le graphique que pour chaque tranche de prix, le pourcentage d'avis positif reste à priori le même. Ainsi, on ne peut pas vraiment dire que le prix influence la qualité d'un jeu. Cependant, est-il réellement intéressant de voir si le prix influence la qualité sans même savoir le nombre de notes qui ont été attribuées dans chaque tranche ? 
 
 ```{r nb_reviews_prix}
@@ -225,11 +225,12 @@ reviews_prix <- jeux %>% filter(pct_pos_total > 0, price < 70)
 
 # Graphique présentant la distribution du nombre de reviews des jeux par tranche de prix. 
 
-ggplot(price_pos_reviews, mapping = aes(x = cut(price, breaks = 14), y = num_reviews_total)) + 
+ggplot(reviews_prix, mapping = aes(x = cut(price, breaks = 14), y = num_reviews_total)) + 
   geom_boxplot() + 
   coord_cartesian(ylim = c(0, 50000)) +
   labs(title = "Distribution du nombre de reviews des jeux par tranche de prix", y = "Nombre de reviews", x = "Tranche de prix ($)") + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) # Les intervalles sont illisibles sinon
 
 ```
-On constate que plus le jeu est cher, plus on a d'avis et donc de notes à propos de celui-ci. Ainsi on peut imaginer que les notes qui sont attribuées à un jeu à prix élevé sont plus fiables (car plus nombreuses) que pour un jeu peu coûteux voire gratuit. 
+
+On constate que plus le jeu est cher, plus on a d'avis et donc de notes à propos de celui-ci. Ainsi on peut imaginer que les notes qui sont attribuées à un jeu à prix élevé sont plus fiables (car plus nombreuses) que pour un jeu peu coûteux voire gratuit.
