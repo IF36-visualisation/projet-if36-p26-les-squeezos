@@ -106,3 +106,76 @@ scale_fill_manual(values = c("#55E250","#1F96E0")) #On mets de la couleur pour d
 
 Sur le graphe ci-dessus, on peut voir qu'en moyenne les joueurs jouent deux fois plus longtemps aux jeux payants par rapport aux jeux gratuits.
 Cette différence peut s'expliquer par la différence de coût pour faire l'acquisition des jeux constituant ces différentes catégories.
+
+
+# Question 3
+
+Une autre observation intéressante de notre jeu de données concerne les colonnes *price* et *estimated_owners*, qui correspondent respectivement au prix d’un jeu et à son nombre estimé de propriétaires.
+
+Cela soulève la question suivante :
+
+### Est-ce que le prix influence les ventes ?
+
+```{r prix_ventes}
+library(ggplot2)
+
+data <- read.csv("./data/games_march2025_cleaned.csv")
+data <- data[data$estimated_owners != "0 - 0", ]
+
+owner_levels <- unique(data$estimated_owners)
+owner_order <- owner_levels[order(sapply(strsplit(owner_levels, " - "), function(x) as.numeric(x[1])))]
+data$owners_cat <- factor(data$estimated_owners, levels = owner_order)
+
+format_millions <- function(x) {
+  sapply(strsplit(x, " - "), function(parts) {
+    parts <- as.numeric(parts)
+    fmt <- function(n) {
+      if (n >= 1e6) paste0(n/1e6, "M")
+      else if (n >= 1e3) paste0(n/1e3, "K")
+      else n
+    }
+    paste0(fmt(parts[1]), " - ", fmt(parts[2]))
+  })
+}
+
+means <- aggregate(price ~ owners_cat, data = data, FUN = mean)
+pct   <- aggregate(price ~ owners_cat, data = data, FUN = function(x) mean(x == 0) * 100)
+means$pct_gratuit <- pct$price
+means$label <- factor(format_millions(as.character(means$owners_cat)), levels = format_millions(as.character(means$owners_cat)))
+means$x <- as.numeric(means$label)
+
+scale_factor <- max(means$price) / 100
+means$smooth <- pmax(predict(loess(price ~ x, data = means)), 0)
+
+x11()
+ggplot(means, aes(x = x)) +
+  geom_bar(aes(y = pct_gratuit * scale_factor), stat = "identity",
+           fill = "#e15759", alpha = 0.35, width = 0.7) +
+  geom_area(aes(y = smooth), fill = "#4e79a7", alpha = 0.1) +
+  geom_line(aes(y = smooth), color = "#4e79a7", linewidth = 1.4) +
+  scale_x_continuous(breaks = means$x, labels = means$label) +
+  scale_y_continuous(
+    name = "Prix moyen (€)",
+    sec.axis = sec_axis(~ . / scale_factor, name = "% de jeux gratuits",
+                        labels = function(x) paste0(x, "%"))
+  ) +
+  labs(
+    title = "Est-ce que le prix influence les ventes ?",
+    subtitle = "Ligne bleue = prix moyen | Barres rouges = % de jeux gratuits",
+    x = "Nombre de propriétaires estimés"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 15),
+    plot.subtitle = element_text(color = "grey40", size = 10),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title.y.left = element_text(color = "#4e79a7", face = "bold"),
+    axis.title.y.right = element_text(color = "#e15759", face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+  ```
+
+Le prix moyen des jeux augmente avec le nombre de propriétaires jusqu’à un certain seuil, puis diminue fortement pour les catégories les plus populaires.
+On remarque également que la part de jeux gratuits est plus élevée dans les catégories les plus populaires.
+
+Alors le prix influence les ventes, mais les jeux les plus populaires sont souvent gratuits ou peu chers, ce qui montre que l’accessibilité joue un rôle clé.
