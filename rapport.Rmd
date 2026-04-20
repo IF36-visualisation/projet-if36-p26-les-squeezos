@@ -1,0 +1,56 @@
+---
+title: "Rapport"
+author: "Juliette SIEBERING, Adeline VERCOUTRE, Antoine NERET, Karl MEHANNA"
+date: "20 avril 2026"
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+---
+
+```{r library, message=FALSE}
+library(ggplot2)
+library(dplyr)
+
+# Le fichier étant trop lourd pour GitHub, il n'est pas dans le dossier partagé, mais sur nos ordinateurs, d'où le '..' au lieu de 'data'
+jeux <- read.csv('../games_march2025_cleaned.csv')
+```
+
+## Question 1
+
+L’une des premières observations issues de notre jeu de données concerne les colonnes *Windows*, *Linux* et *Mac*, qui correspondent aux trois systèmes d’exploitation les plus répandus dans le monde.
+
+Cela soulève naturellement la question suivante :
+
+#### Parmi ces trois systèmes d’exploitation, lequel prend en charge le plus grand nombre de jeux ?
+
+```{r sys_expl}
+
+# On transforme les chaînes de caractère "TRUE" et "FALSE" en booléens
+jeux <- jeux %>%
+  mutate(
+    windows = as.logical(windows),
+    mac     = as.logical(mac),
+    linux   = as.logical(linux)
+  )
+
+# On crée un tableau avec, pour chaque système d'exploitation, la somme des 1, soit le nombre de True
+nb_jeux_sys_ex <- data.frame(
+  sys_ex = c("Windows", "Mac", "Linux"),
+  nb = c(
+    sum(jeux$windows),
+    sum(jeux$mac),
+    sum(jeux$linux)
+  )
+)
+
+# On crée la visualisation correspondante : un bar chart avec la somme des jeux pour chaque système d'exploitation, sans oublier le titre
+repartition_systemes <- ggplot(data = nb_jeux_sys_ex, mapping = aes(x = sys_ex, y = nb, fill = sys_ex)) +
+  geom_col() +
+  geom_text(aes(label = nb), vjust = -0.5) +
+  labs(title = "Nombre de jeux supportés par les différents systèmes d'exploitation", 
+       x = "Système d'exploitation", y = "Nombre de jeux") +
+  theme(legend.position = "none") # La légende n'est pas nécessaire puisque chaque couleur est associée à un système, donc le nom est indiqué sous chaque barre.
+repartition_systemes
+```
+
+L’analyse montre clairement que Windows domine largement les autres.. En effet, il propose environ cinq fois plus de jeux que Mac et sept fois plus que Linux.
