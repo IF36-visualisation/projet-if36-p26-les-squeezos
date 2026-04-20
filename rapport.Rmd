@@ -60,3 +60,49 @@ repartition_systemes
 ```
 
 L’analyse montre clairement que Windows domine largement les autres. En effet, il propose environ cinq fois plus de jeux que Mac et sept fois plus que Linux.
+
+# Question 2
+
+La deuxième observation de notre jeu de données concerne les colonnes *average_playtime_forever* et *price* qui correspondent au temps de jeu moyen des joueurs et au prix des jeux.
+
+La question soulevée par ces colonnes est la suivante:
+
+### Est-ce que les joueurs passent plus de temps sur les jeux payant plutôt que sur des jeux gratuits ?
+
+```{r}
+library(dplyr)
+library(ggplot2)
+#On filtre les jeux pour que le prix soit égal à 0
+jeux_gratuits <- filter(jeux,price == 0.00)
+
+#On calcule la moyenne des heures de jeux
+jeux_gratuits <- jeux_gratuits %>%
+  
+#On fait la moyenne des temps de jeu moyens de tous les jeux gratuits
+transmute(average_playtime_forever=(mean(average_playtime_forever))) %>% 
+
+#Le distinct nous assure d'avoir une seule valeur
+distinct() 
+
+#On filtre les jeux pour que le prix soit supérieur à 0
+jeux_payants <- filter(jeux,price > "0.0")
+
+#On calcule la moyenne des heures de jeux
+jeux_payants <- jeux_payants %>%
+
+#Comme pour les jeux gratuits, on fais la moyenne des temps de jeu pour tous les jeux payants et on a le distinct pour être sûr d'avoir une seule valeur
+transmute(average_playtime_forever=(mean(average_playtime_forever))) %>% distinct()
+
+#On fusionne les moyennes en un seul dataframe
+tps_jeu_moyen <- rbind(jeux_gratuits,jeux_payants)
+
+#On fait la visualisation correspondante c'est-à-dire un bar chart avec le nombre d'heures de jeu moyen sur les différentes catégories de jeux ainsi que deux catégories correspondant à la gratuité des jeux
+ggplot(tps_jeu_moyen, aes(x = c("Jeux gratuits", "Jeux payants"), y = average_playtime_forever , fill = c("Jeux gratuits", "Jeux payants")))+
+geom_bar(stat='identity')+
+ggtitle("Nombre moyen d'heures de jeu en fonction de la gratuité des jeux")+ 
+labs(x = "Gratuité des jeux", y = "Nombre d'heures de jeu moyennes")+ theme(legend.position = "none")+ #Il n'y a pas besoin de légende pour cette visualisation puisque les couleurs différencient les catégories de jeux et il y a le nom des catégories sous les barres correspondantes
+scale_fill_manual(values = c("#55E250","#1F96E0")) #On mets de la couleur pour différencier les catégories
+```
+
+Sur le graphe ci-dessus, on peut voir qu'en moyenne les joueurs jouent deux fois plus longtemps aux jeux payants par rapport aux jeux gratuits.
+Cette différence peut s'expliquer par la différence de coût pour faire l'acquisition des jeux constituant ces différentes catégories.
