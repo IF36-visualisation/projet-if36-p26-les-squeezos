@@ -7,7 +7,7 @@ output:
     theme: cayman
 ---
 
-```{r library, message=FALSE}
+```{r initialisation, message=FALSE}
 library(ggplot2)
 library(dplyr)
 
@@ -15,7 +15,13 @@ library(dplyr)
 jeux <- read.csv('../games_march2025_cleaned.csv')
 ```
 
-## Question 1
+# Introduction
+
+Notre jeu de données regroupe une grande partie des jeux publiés par Steam, avec de nombreuses informations comme le prix, le système d’exploitation, la date de publication, etc… (voir tableau ci-dessous).
+Il provient du site Kaggle, nous avons choisi ce jeu en particulier pour sa richesse (89618 observations et 47 variables) et pour sa récence (les données datent de mars 2025).
+Étant tous des joueurs dans le groupe, cela nous paraît intéressant de voir les données concernant nos jeux préférés.
+
+# Question 1
 
 L’une des premières observations issues de notre jeu de données concerne les colonnes *Windows*, *Linux* et *Mac*, qui correspondent aux trois systèmes d’exploitation les plus répandus dans le monde.
 
@@ -53,4 +59,4 @@ repartition_systemes <- ggplot(data = nb_jeux_sys_ex, mapping = aes(x = sys_ex, 
 repartition_systemes
 ```
 
-L’analyse montre clairement que Windows domine largement les autres.. En effet, il propose environ cinq fois plus de jeux que Mac et sept fois plus que Linux.
+L’analyse montre clairement que Windows domine largement les autres. En effet, il propose environ cinq fois plus de jeux que Mac et sept fois plus que Linux.
