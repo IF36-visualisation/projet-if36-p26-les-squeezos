@@ -118,45 +118,52 @@ Cela soulève la question suivante :
 
 ```{r prix_ventes}
 
+# On ne garde que les jeux qui ont une estimation d'owners
 data <- jeux[jeux$estimated_owners != "0 - 0", ]
 
+# On crée une nouvelle variable catégorielle à partir de la variable estimated_owners, en ordonnant les catégories de manière croissante
 owner_levels <- unique(data$estimated_owners)
 owner_order <- owner_levels[order(sapply(strsplit(owner_levels, " - "), function(x) as.numeric(x[1])))]
 data$owners_cat <- factor(data$estimated_owners, levels = owner_order)
 
+# On crée une fonction pour formater les catégories d'estimation d'owners en millions ou milliers, pour une meilleure lisibilité sur le graphique
 format_millions <- function(x) {
   sapply(strsplit(x, " - "), function(parts) {
-    parts <- as.numeric(parts)
+    parts <- as.numeric(parts) # On convertit les parties en numérique pour pouvoir les formater
     fmt <- function(n) {
-      if (n >= 1e6) paste0(n/1e6, "M")
-      else if (n >= 1e3) paste0(n/1e3, "K")
-      else n
+      if (n >= 1e6) paste0(n/1e6, "M") # Si le nombre est supérieur ou égal à un million, on le divise par un million et on ajoute "M"
+      else if (n >= 1e3) paste0(n/1e3, "K") # Si le nombre est supérieur ou égal à mille, on le divise par mille et on ajoute "K"
+      else n # Sinon, on laisse le nombre tel quel
     }
-    paste0(fmt(parts[1]), " - ", fmt(parts[2]))
+    paste0(fmt(parts[1]), " - ", fmt(parts[2])) # On reformate les deux parties de la catégorie d'estimation d'owners et on les concatène avec " - " entre les deux
   })
 }
 
+# On calcule le prix moyen et le pourcentage de jeux gratuits pour chaque catégorie d'estimation d'owners
 means <- aggregate(price ~ owners_cat, data = data, FUN = mean)
 pct   <- aggregate(price ~ owners_cat, data = data, FUN = function(x) mean(x == 0) * 100)
 means$pct_gratuit <- pct$price
 means$label <- factor(format_millions(as.character(means$owners_cat)), levels = format_millions(as.character(means$owners_cat)))
 means$x <- as.numeric(means$label)
 
+# On ajuste une courbe de tendance pour le prix moyen en fonction de l'estimation d'owners, et on la met à l'échelle pour qu'elle soit visible sur le même graphique que les pourcentages de jeux gratuits
 scale_factor <- max(means$price) / 100
 means$smooth <- pmax(predict(loess(price ~ x, data = means)), 0)
 
-#x11()
+# Visualisation combinée du prix moyen et du pourcentage de jeux gratuits par catégorie d'estimation d'owners
 ggplot(means, aes(x = x)) +
   geom_bar(aes(y = pct_gratuit * scale_factor), stat = "identity",
-           fill = "#e15759", alpha = 0.35, width = 0.7) +
-  geom_area(aes(y = smooth), fill = "#4e79a7", alpha = 0.1) +
-  geom_line(aes(y = smooth), color = "#4e79a7", linewidth = 1.4) +
+           fill = "#e15759", alpha = 0.35, width = 0.7) + # Barres rouges pour le pourcentage de jeux gratuits
+  geom_area(aes(y = smooth), fill = "#4e79a7", alpha = 0.1) + # Zone bleue pour la courbe de tendance du prix moyen
+  geom_line(aes(y = smooth), color = "#4e79a7", linewidth = 1.4) + # Ligne bleue pour le prix moyen
   scale_x_continuous(breaks = means$x, labels = means$label) +
   scale_y_continuous(
     name = "Prix moyen ($)",
     sec.axis = sec_axis(~ . / scale_factor, name = "% de jeux gratuits",
-                        labels = function(x) paste0(x, "%"))
+                        labels = function(x) paste0(x, "%")) # Axe secondaire pour le pourcentage de jeux gratuits, avec des labels en pourcentage
   ) +
+
+  # On ajoute un titre et un sous-titre pour expliquer les éléments du graphique, ainsi que des thèmes pour améliorer la lisibilité
   labs(
     title = "Est-ce que le prix influence les ventes ?",
     subtitle = "Ligne bleue = prix moyen | Barres rouges = % de jeux gratuits",
