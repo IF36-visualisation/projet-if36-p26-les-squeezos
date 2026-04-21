@@ -50,13 +50,12 @@ nb_jeux_sys_ex <- data.frame(
 )
 
 # On crée la visualisation correspondante : un bar chart avec la somme des jeux pour chaque système d'exploitation, sans oublier le titre
-repartition_systemes <- ggplot(data = nb_jeux_sys_ex, mapping = aes(x = sys_ex, y = nb, fill = sys_ex)) +
+ggplot(data = nb_jeux_sys_ex, mapping = aes(x = sys_ex, y = nb, fill = sys_ex)) +
   geom_col() +
   geom_text(aes(label = nb), vjust = -0.5) +
   labs(title = "Nombre de jeux supportés par les différents systèmes d'exploitation", 
        x = "Système d'exploitation", y = "Nombre de jeux") +
   theme(legend.position = "none") # La légende n'est pas nécessaire puisque chaque couleur est associée à un système, donc le nom est indiqué sous chaque barre.
-repartition_systemes
 ```
 
 L’analyse montre clairement que Windows domine largement les autres. En effet, il propose environ cinq fois plus de jeux que Mac et sept fois plus que Linux.
