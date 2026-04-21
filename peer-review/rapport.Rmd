@@ -65,7 +65,7 @@ L’analyse montre clairement que Windows domine largement les autres. En effet,
 
 La deuxième observation de notre jeu de données concerne les colonnes *average_playtime_forever* et *price*, qui correspondent au temps de jeu moyen des joueurs et au prix des jeux.
 
-La question soulevée par ces colonnes est la suivante:
+La question soulevée par ces colonnes est la suivante :
 
 #### Les joueurs passent-ils plus de temps sur les jeux payant ou sur les jeux gratuits ?
 
@@ -153,7 +153,7 @@ ggplot(means, aes(x = x)) +
   geom_line(aes(y = smooth), color = "#4e79a7", linewidth = 1.4) +
   scale_x_continuous(breaks = means$x, labels = means$label) +
   scale_y_continuous(
-    name = "Prix moyen (€)",
+    name = "Prix moyen ($)",
     sec.axis = sec_axis(~ . / scale_factor, name = "% de jeux gratuits",
                         labels = function(x) paste0(x, "%"))
   ) +
@@ -181,13 +181,13 @@ On peut donc considérer que le prix influence les ventes, mais les jeux les plu
 
 # Question 4
 
-En parcourant les différentes variables du jeu de données, la mise en relation des colonnes *price* désignant le prix d'un jeu et *pct_pos_total* correspondant à la note attribuée au jeu semblait intéressante. En effet, on s'attendrait que plus on met de l'argent dans un jeu, mieux celui-ci devrait être. 
+En parcourant les différentes variables du jeu de données, la mise en relation des colonnes *price* désignant le prix d'un jeu et *pct_pos_total* correspondant à la note attribuée au jeu semblait intéressante. En effet, on s'attendrait à ce que plus on mette d'argent dans un jeu, meilleur il soit. 
 
 D'où la question suivante : 
 
 #### Est-ce que le prix influence la qualité ?
 
-Tout d'abord, pour répondre à la question, nous avons exploré le jeu de données pour voir s'il était cohérent de représenter dans son entièreté une graphique mettant en relation prix et avis positif des jeux. 
+Tout d'abord, pour répondre à la question, nous avons exploré le jeu de données pour voir s'il était cohérent de représenter dans son entièreté un graphique mettant en relation prix et avis positifs des jeux. 
 
 ```{r exploration_prix}
 
@@ -200,11 +200,11 @@ ggplot(reviews_prix, mapping = aes(x = price)) +
   labs(title = "Répartition du nombre de jeux en fonction du prix", x = "Prix ($)", y = "Nombre de jeux")
 ```
 
-Après exploration des données, on se rend compte qu'il y a très peu de jeux dont le prix est supérieur à 70 euros, ainsi on décide d'écarter ces jeux pour avoir une meilleure visibilité de la tranche la plus représentée (jeux allant de la gratuité jusqu'à 70 euros). 
+Après exploration des données, on se rend compte qu'il y a très peu de jeux dont le prix est supérieur à 70 dollars, ainsi on décide d'écarter ces jeux pour avoir une meilleure visibilité de la tranche la plus représentée (jeux allant de la gratuité à 70 dollars). 
 
 ```{r qualite_prix}
 
-# On ne garde que les jeux possédant une note et dont le prix est inférieur à 70 euros.
+# On ne garde que les jeux possédant une note et dont le prix est inférieur à 70 dollars.
 reviews_prix <- jeux %>% filter(pct_pos_total > 0, price < 70)
 
 # Graphique présentant la distribution des notes données aux jeux par tranche de prix. (Mettre en relation avec un nuage de points les avis positifs avec les prix rendait le tout illisible.)
@@ -216,7 +216,7 @@ ggplot(reviews_prix, mapping = aes(x = cut(price, breaks = 14), y = pct_pos_tota
 
 ```
 
-On voit d'après le graphique que pour chaque tranche de prix, le pourcentage d'avis positif reste à priori le même. Ainsi, on ne peut pas vraiment dire que le prix influence la qualité d'un jeu. Cependant, est-il réellement intéressant de voir si le prix influence la qualité sans même savoir le nombre de notes qui ont été attribuées dans chaque tranche ? 
+D'après le graphique pour chaque tranche de prix, le pourcentage d'avis positif reste à priori le même. Ainsi, on ne peut pas vraiment dire que le prix influence la qualité d'un jeu. Cependant, est-il réellement intéressant de voir si le prix influence la qualité sans même savoir le nombre de notes qui ont été attribuées dans chaque tranche ? 
 
 ```{r nb_reviews_prix}
 
