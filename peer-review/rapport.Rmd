@@ -11,8 +11,8 @@ output:
 library(ggplot2)
 library(dplyr)
 
-# Le fichier étant trop lourd pour GitHub, il n'est pas dans le dossier partagé, mais sur nos ordinateurs, d'où le '..' au lieu de 'data'
-jeux <- read.csv('../games_march2025_cleaned.csv')
+# Le fichier étant trop lourd pour GitHub, il n'est pas dans le dossier partagé, mais sur nos ordinateurs, d'où le '../..' au lieu de '../data'
+jeux <- read.csv('../../games_march2025_cleaned.csv')
 ```
 
 # Introduction
@@ -196,7 +196,7 @@ D'où la question suivante :
 
 Tout d'abord, pour répondre à la question, nous avons exploré le jeu de données pour voir s'il était cohérent de représenter dans son entièreté un graphique mettant en relation prix et avis positifs des jeux. 
 
-```{r exploration_prix}
+```{r exploration_prix, message=FALSE}
 
 # On ne conserve que les jeux qui ont une note
 reviews_prix <- jeux %>% filter(pct_pos_total > 0)
