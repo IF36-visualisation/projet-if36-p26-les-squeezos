@@ -1,6 +1,6 @@
 ---
 title: "Rapport"
-author: "Juliette SIEBERING, Adeline VERCOUTRE, Antoine NERET, Karl MEHANNA"
+author: "Juliette SIEBERING, Adeline VERCOUTRE"
 date: "20 avril 2026"
 output:
   prettydoc::html_pretty:
@@ -10,6 +10,8 @@ output:
 ```{r initialisation, message=FALSE}
 library(ggplot2)
 library(dplyr)
+library(stringr)
+library(viridis)
 
 # Le fichier étant trop lourd pour GitHub, il n'est pas dans le dossier partagé, mais sur nos ordinateurs, d'où le '../..' au lieu de '../data'
 jeux <- read.csv('../../games_march2025_cleaned.csv')
@@ -106,84 +108,319 @@ ggplot(tps_jeu_moyen, aes(x = c("Jeux gratuits", "Jeux payants"), y = average_pl
 Sur le graphe ci-dessus, on peut voir qu'en moyenne les joueurs jouent deux fois plus longtemps aux jeux payants qu'aux jeux gratuits.
 Cette différence peut s'expliquer par la différence de coût pour faire l'acquisition des jeux constituant ces différentes catégories.
 
+# Les différents facteurs pouvant avoir un impact sur la vente des jeux
 
-# Question 3
+Avant même de regarder ces facteurs, il est important de savoir combien de jeux appartiennt à chaque fourchette d'acheteurs pour pouvoir faire des analyses pertinentes plus tard.
 
-Une autre observation intéressante de notre jeu de données concerne les colonnes *price* et *estimated_owners*, qui correspondent respectivement au prix d’un jeu et à son nombre estimé de propriétaires.
+```{r jeux_acheteurs}
 
-Cela soulève la question suivante :
+# On formatte les nombres pour passer de "10000000" à "10M"
+format_number <- function(n) {
+  
+  if (n >= 1e6) { 
+    paste0(round(n / 1e6, 1), "M") # Si le nombre est au moins 1 million, on le remplace par "...M"
+    
+  } else if (n >= 1e3) {
+    paste0(round(n / 1e3, 1), "K") # Si le nombre est au moins 1 millier, on le remplace par "...K"
+    
+  } else {
+    as.character(n)
+  }
+}
 
-#### Est-ce que le prix influence les ventes ?
-
-```{r prix_ventes}
-
-# On ne garde que les jeux qui ont une estimation d'owners
-data <- jeux[jeux$estimated_owners != "0 - 0", ]
-
-# On crée une nouvelle variable catégorielle à partir de la variable estimated_owners, en ordonnant les catégories de manière croissante
-owner_levels <- unique(data$estimated_owners)
-owner_order <- owner_levels[order(sapply(strsplit(owner_levels, " - "), function(x) as.numeric(x[1])))]
-data$owners_cat <- factor(data$estimated_owners, levels = owner_order)
-
-# On crée une fonction pour formater les catégories d'estimation d'owners en millions ou milliers, pour une meilleure lisibilité sur le graphique
-format_millions <- function(x) {
-  sapply(strsplit(x, " - "), function(parts) {
-    parts <- as.numeric(parts) # On convertit les parties en numérique pour pouvoir les formater
-    fmt <- function(n) {
-      if (n >= 1e6) paste0(n/1e6, "M") # Si le nombre est supérieur ou égal à un million, on le divise par un million et on ajoute "M"
-      else if (n >= 1e3) paste0(n/1e3, "K") # Si le nombre est supérieur ou égal à mille, on le divise par mille et on ajoute "K"
-      else n # Sinon, on laisse le nombre tel quel
-    }
-    paste0(fmt(parts[1]), " - ", fmt(parts[2])) # On reformate les deux parties de la catégorie d'estimation d'owners et on les concatène avec " - " entre les deux
+# On formatte les intervalles d'acheteurs pour passer de "10000000 - 20000000" à "10M - 20M"
+format_range <- function(x) {
+  
+  sapply(strsplit(x, " - "), function(parts) { # Pour chaque intervalle, on divise la chaîne de caractère en 2 parties
+    
+    parts <- as.numeric(parts) # On convertit ces 2 parties en nombre
+    
+    paste0( # On créée une nouvelle chaîne contenant
+      format_number(parts[1]), # Le nombre bas de la fourchette formatté avec la fonction "format_number",
+      " - ", # La chaîne de caractère permettant de séparer les deux extrémités de la fourchette
+      format_number(parts[2]) # Et le nombre haut de la fourchette formatté avec la fonction "format_number"
+    )
   })
 }
 
-# On calcule le prix moyen et le pourcentage de jeux gratuits pour chaque catégorie d'estimation d'owners
-means <- aggregate(price ~ owners_cat, data = data, FUN = mean)
-pct   <- aggregate(price ~ owners_cat, data = data, FUN = function(x) mean(x == 0) * 100)
-means$pct_gratuit <- pct$price
-means$label <- factor(format_millions(as.character(means$owners_cat)), levels = format_millions(as.character(means$owners_cat)))
-means$x <- as.numeric(means$label)
+# On récupère toutes les fourchettes distinctes d'acheteurs
+fourchettes_owners <- unique(jeux$estimated_owners) 
 
-# On ajuste une courbe de tendance pour le prix moyen en fonction de l'estimation d'owners, et on la met à l'échelle pour qu'elle soit visible sur le même graphique que les pourcentages de jeux gratuits
-scale_factor <- max(means$price) / 100
-means$smooth <- pmax(predict(loess(price ~ x, data = means)), 0)
+# On classe des fourchettes de la plus basse à la plus haute
+ordre_fourchettes <- fourchettes_owners[
+  order(sapply(strsplit(fourchettes_owners, " - "), function(x) as.numeric(x[1])))] # On ordonne les fourchettes grâce à leurs parties numériques
 
-# Visualisation combinée du prix moyen et du pourcentage de jeux gratuits par catégorie d'estimation d'owners
-ggplot(means, aes(x = x)) +
-  geom_bar(aes(y = pct_gratuit * scale_factor), stat = "identity",
-           fill = "#e15759", alpha = 0.35, width = 0.7) + # Barres rouges pour le pourcentage de jeux gratuits
-  geom_area(aes(y = smooth), fill = "#4e79a7", alpha = 0.1) + # Zone bleue pour la courbe de tendance du prix moyen
-  geom_line(aes(y = smooth), color = "#4e79a7", linewidth = 1.4) + # Ligne bleue pour le prix moyen
-  scale_x_continuous(breaks = means$x, labels = means$label) +
-  scale_y_continuous(
-    name = "Prix moyen ($)",
-    sec.axis = sec_axis(~ . / scale_factor, name = "% de jeux gratuits",
-                        labels = function(x) paste0(x, "%")) # Axe secondaire pour le pourcentage de jeux gratuits, avec des labels en pourcentage
-  ) +
+# On applique l'ordre décrit précédemment à nos fourchettes
+jeux$fourchettes_ordonnees <- factor(jeux$estimated_owners, levels = ordre_fourchettes)
 
-  # On ajoute un titre et un sous-titre pour expliquer les éléments du graphique, ainsi que des thèmes pour améliorer la lisibilité
-  labs(
-    title = "Est-ce que le prix influence les ventes ?",
-    subtitle = "Ligne bleue = prix moyen | Barres rouges = % de jeux gratuits",
-    x = "Nombre de propriétaires estimés"
-  ) +
-  theme_minimal(base_size = 13) +
-  theme(
-    plot.title = element_text(face = "bold", size = 15),
-    plot.subtitle = element_text(color = "grey40", size = 10),
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    axis.title.y.left = element_text(color = "#4e79a7", face = "bold"),
-    axis.title.y.right = element_text(color = "#e15759", face = "bold"),
-    panel.grid.minor = element_blank()
-  )
+# On formatte nos fourchettes
+labels_clean <- format_range(levels(jeux$fourchettes_ordonnees))
+
+# On crée un tableau permettant de voir combien de jeux sont associés à chaque fourchette
+nb_jeux_owners <- jeux %>%
+  count(fourchettes_ordonnees) %>%
+  mutate(
+    `Fourchette d'acheteurs` = format_range(as.character(fourchettes_ordonnees))
+  ) %>%
+  select(`Fourchette d'acheteurs`, `Nombre de jeux` = n)
+
+# On affiche ce tableau
+nb_jeux_owners
 ```
 
-Le prix moyen des jeux augmente avec le nombre de propriétaires jusqu’à un certain seuil, puis diminue fortement pour les catégories les plus populaires.
-On remarque également que la part de jeux gratuits est plus élevée dans les catégories les plus populaires.
+On voit ici qu'il n'y a que 2 jeux qui ont plus de 100 millions d'acheteurs, ce qui signifie que les 2 dernières fourchettes ne sont pas comparables aux autres. On peut se poser cette même question de pertinence pour les 3 fourchettes précédentes, qui ont moins d'une centaines de jeux associés
 
-On peut donc considérer que le prix influence les ventes, mais les jeux les plus populaires sont souvent gratuits ou peu chers, ce qui montre que l’accessibilité joue un rôle clé lors de l'achat d'un jeu.
+## 1er facteur : le prix
 
+L'un des premiers facteurs qui nous vient à l'esprit serait le prix, nous allons donc observer les variables *price* et *estimated_owners* pour répondre à la question suivante :
+
+#### Y a-t-il une corrélation entre le prix d'un jeu et ses ventes ?
+
+```{r prix_ventes}
+
+# On ne garde que les gens qui ont été achetés
+data <- jeux %>% filter(estimated_owners != "0 - 0")
+labels_clean <- labels_clean[labels_clean != "0 - 0"]
+
+# On crée des fourchettes de prix pour avoir un graphique lisible
+ordre_prix <- c(
+  "Gratuit",
+  paste0(seq(0, 35, 5), "–", seq(5, 40, 5), "$"),
+  "Plus de 40$"
+)
+
+# On ajoute une colonne à data contenant les fourchettes associées au prix de chaque jeu
+data$prix_cat <- cut(
+  data$price,
+  breaks = c(-0.01, 0, seq(5, 40, 5), Inf),
+  labels = c(
+    "Gratuit",
+    paste0(seq(0, 35, 5), "–", seq(5, 40, 5), "$"),
+    "Plus de 40$"
+  ),
+  include.lowest = TRUE
+)
+
+# On trie les jeux dans l'ordre de la fourchette de prix la plus basse à la plus haute
+data$prix_cat <- factor(data$prix_cat, levels = rev(ordre_prix))
+
+# On compte combien de jeux ont été vendus par fourchette de prix, par fourchette d'acheteurs
+repartition <- data %>% count(prix_cat, fourchettes_ordonnees)
+
+# On crée la visualisation
+ggplot(repartition, aes(x = fourchettes_ordonnees, y = n, fill = prix_cat)) +
+  
+  geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
+  
+  scale_x_discrete(labels = labels_clean) + # On affiche les fourchettes "au propore" (10M au lieu de 10000000)
+  scale_fill_viridis_d() + # système de couleur pour daltoniens
+  
+  labs(
+    title = "Répartition des prix selon le nombre de propriétaires",
+    x = "Nombre de propriétaires estimés",
+    y = "Proportion de jeux",
+    fill = "Prix"
+  ) +
+  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On penche l'axe des x pour pouvoir lire les fourchettes
+
+```
+
+Grâce à cette visualisation, nous pouvons observer plusieurs choses, notamment que la proportion de jeux gratuits augmentent avec les nombre d'acheteurs, même en oubliant les 2 dernières fourchettesqui ne contiennent qu'un jeu chacune. Cela paraît logique puisque les jeux gratuit sont les plus accessibles.
+
+Fait plus étonnant, le nombre de jeux de plus de 40$ augmente également avec le nombre d'acheteurs. Cela semble contre-intuitif, mais une très bonne réputation, une boîte de production célèbre ou des critiques très positives sur le graphisme, le gameplay ou les personages peuvent justifer et faire oublier le prix "élevé" d'un jeu.
+
+Nous pouvons également voir que la variété des prix diminue avec le nombre d'acheteurs. Plus les tranches sont élevées, moins il y a de fourchettes de prix différentes. Je ne vois pas d'explication à ce phénomène.
+
+Toutes ces observatios nous permette de supposer que le prix a certes un impact sur les ventes, mais d'autres facteurs entrent sûrement en jeu lor de l'achat d'un jeu vidéo.
+
+## 2ème facteur : la limite d'âge
+
+```{r age_ventes}
+
+# On trie les jeux dans l'ordre de la limite d'âge la plus basse à la plus haute
+data$age_cat <- factor(data$required_age, levels = rev(sort(unique(data$required_age))))
+
+# On compte combien de jeux ont été vendus par limite d'âge, par fourchette d'acheteurs
+repartition <- data %>% count(age_cat, fourchettes_ordonnees)
+
+# On crée la visualisation
+ggplot(repartition, aes(x = fourchettes_ordonnees, y = n, fill = age_cat)) +
+  
+  geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
+  
+  scale_x_discrete(labels = labels_clean) + # On affiche les fourchettes "au propore" (10M au lieu de 10000000)
+  scale_fill_viridis_d() + # système de couleur pour daltoniens
+  
+  labs(
+    title = "Répartition des âges selon le nombre d'acheteurs",
+    x = "Nombre de propriétaires estimés",
+    y = "Proportion de jeux",
+    fill = "Âge requis"
+  ) +
+  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On penche l'axe des x pour pouvoir lire les fourchettes
+
+```
+
+Au vu du graphique ci-dessus, il paraît difficile de tirer des informations pertinentes pour savoir si la restiction d'âge a un impact sur le nombre de ventes d'un jeu ou non.
+
+## 3ème facteur : les langues supportées
+
+Un facteur qui pourrait également être déterminant sur les ventes d'un jeu est le nombre de langues supportées. Nous allons donc mettre en relation les variables *supported_language* et *estimated_owners* pour répondre à la question :
+
+#### Y a-t-il une corrélation entre les langues supportées par un jeu et ses ventes ?
+
+```{r langues_ventes}
+
+# On compte le nombre de langues supportées pour chaque jeu
+data$nb_langues <- stringr::str_count(data$supported_languages, ",") + 1
+
+# On compte combien de jeux ont été vendus par nombre de langues, par fourchette d'acheteurs
+repartition <- data %>% count(nb_langues, fourchettes_ordonnees)
+
+# On crée la visualisation
+ggplot(repartition,
+       aes(x = fourchettes_ordonnees,
+           y = n,
+           fill = factor(nb_langues))) +
+  
+  geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
+  
+  scale_x_discrete(labels = labels_clean) + # On affiche les fourchettes "au propore" (10M au lieu de 10000000)
+  scale_fill_viridis_d() + # système de couleur pour daltoniens
+  
+  labs(
+    title = "Répartition du nombre de langues supportées selon le nombre d'acheteurs",
+    x = "Nombre de propriétaires estimés",
+    y = "Proportion de jeux",
+    fill = "Nombre de langues"
+  ) +
+  
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)) # On penche l'axe des x pour pouvoir lire les fourchettes
+
+```
+
+Ce graphique est illisible, car il y a trop de nombres de langues supportées possibles. Nous allons donc nous concentrer sur langues qui figurent parmi les plus parlées au monde : l'anglais, le chinois, l'arabe, le russe, le français, l'espagnol, le portugais, le japonais et le coréen.
+
+```{r echantillon_langues_ventes, fig.width=14, fig.height=10}
+
+# On fait la liste des langues quel'on veut analyser
+langues <- c(
+  "English",
+  "French",
+  "Spanish",
+  "Russian",
+  "Chinese",
+  "Arabic",
+  "Portuguese",
+  "Japanese",
+  "Korean"
+)
+
+# On compte combien de jeux ont été vendus par langue, par fourchette d'acheteurs
+repartition <- bind_rows(
+  
+   # Pour chaque langue de notre liste...
+  lapply(langues, function(langue) {
+    
+    # On ajoute une colonne pour chaque langue, et on regarde si elle est supportée ou non
+    data %>% mutate(
+        langue = langue,
+        supportee = ifelse(
+          str_detect(supported_languages,
+                     paste0("\\b", langue, "\\b")),
+          "Oui",
+          "Non"
+        )
+      ) %>% count(langue, fourchettes_ordonnees, supportee) # On fait la somme des jeux qui supportent chaque langue pour chaque fourchette d'acheteurs
+  })
+)
+
+# On crée la visualisation
+ggplot(
+  repartition,
+  aes(
+    x = fourchettes_ordonnees,
+    y = n,
+    fill = supportee
+  )
+) +
+  
+  geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
+  
+  scale_x_discrete(labels = labels_clean) + # On affiche les fourchettes "au propore" (10M au lieu de 10000000)
+  scale_fill_viridis_d() + # système de couleur pour daltoniens
+  
+  facet_wrap(~ langue) + # On fait une grille de visualisation montrant les 9 langues étudiées
+  
+  labs(
+    title = "Répartition des langues supportées selon le nombre d'acheteurs",
+    x = "Nombre de propriétaires estimés",
+    y = "Proportion de jeux",
+    fill = "Langue supportée ou non"
+  ) +
+  
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)) # On penche l'axe des x pour pouvoir lire les fourchettes
+
+```
+
+Grâce à cette visualisation, nous voyons bien que le nombre de langues supportées est corrélé aux nombre ventes. En effet, quelle que soit la langue, la proportion de jeux la supportant augmente avec le nombre d'acheteurs.
+
+## 4ème facteur : la date de publication
+
+Si nous voulons observer l'impact de différents facteurs sur les ventes d'un jeu, nous pouvons prendre les dates de publication. En effet, il serait intéressant de voir si les nombre de ventes d'un jeu varie selon l'année ou le mois de publication. Nous allons donc mettre en relation les colonnes
+Une autre observation intéressante de notre jeu de données concerne les variables *release_date* et *estimated_owners* pour répondre à la question :
+
+#### Y a-t-il une corrélation entre la date de publication d'un jeu et ses ventes ?
+
+```{r date_ventes}
+
+# On transforme les chaînes de caractères en date
+data$release_date <- as.Date(data$release_date)
+
+# On ajoute une colonne pour n'avoir que les mois, au format "Janvier", "Février", etc... au lieu de 01, 02, etc...
+data$mois <- factor(
+  format(data$release_date, "%m"),
+  levels = rev(sprintf("%02d", 1:12)),
+  labels = rev(c(
+    "Janvier", "Février", "Mars", "Avril",
+    "Mai", "Juin", "Juillet", "Août",
+    "Septembre", "Octobre", "Novembre", "Décembre"
+  ))
+)
+
+# On compte combien de jeux ont été vendus par mois, par fourchette d'acheteurs
+repartition <- data %>% count(mois, fourchettes_ordonnees)
+
+# On crée la visualisation
+ggplot(repartition, aes(x = fourchettes_ordonnees, y = n, fill = mois)) +
+  
+  geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
+  
+  scale_x_discrete(labels = labels_clean) + # On affiche les fourchettes "au propore" (10M au lieu de 10000000)
+  scale_fill_viridis_d() + # système de couleur pour daltoniens
+  
+  labs(
+    title = "Répartition des mois de sortie selon le nombre de propriétaires",
+    x = "Nombre de propriétaires estimés",
+    y = "Proportion de jeux",
+    fill = "Mois de sortie"
+  ) +
+  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On penche l'axe des x pour pouvoir lire les fourchettes
+```
+
+Cette visualisation ne nous permet pas de conclure qoi que ce soit, puisque la proportion de jeux par fourchette d'acheteur ne varie pas ou très peu selon le mois de publication.
+
+
+## Conclusion
+
+Grâce à toutes ces visualisations, nous avons pu constater que plusieurs facteurs peuvent avoir un impact sur la vente d'un jeu. Le prix reste l'un des facteurs primordiaux, mais les langues supportées semblent également un rôle important lors de l'achat d'un jeu.
+
+A noter que, sur toutes les visualisations de cette section, la fourchette 20 millions - 50 millions présente un anomalie : à chaque fois, elle suit la tendance inverse des fourchettes précédentes, quel que soit le facteur étudié.
 
 # Question 4
 
@@ -240,3 +477,5 @@ ggplot(reviews_prix, mapping = aes(x = cut(price, breaks = 14), y = num_reviews_
 ```
 
 On constate que plus le jeu est cher, plus on a d'avis et donc de notes à propos de celui-ci. Ainsi on peut imaginer que les notes qui sont attribuées à un jeu à prix élevé sont plus fiables (car plus nombreuses) que pour un jeu peu coûteux voire gratuit.
+
+
