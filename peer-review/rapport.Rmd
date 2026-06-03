@@ -12,9 +12,17 @@ library(ggplot2)
 library(dplyr)
 library(stringr)
 library(viridis)
+library(tidyverse)
 
 # Le fichier étant trop lourd pour GitHub, il n'est pas dans le dossier partagé, mais sur nos ordinateurs, d'où le '../..' au lieu de '../data'
 jeux <- read.csv('../../games_march2025_cleaned.csv')
+
+# On transforme les fausses listes en véritables listes (genres, catégories)
+
+jeux <- jeux %>% mutate(
+  genres = str_remove_all(genres, "\\[|\\]|'"), 
+  genres = str_split(genres, ",\\s*"))
+
 ```
 
 # Introduction
@@ -422,17 +430,20 @@ Grâce à toutes ces visualisations, nous avons pu constater que plusieurs facte
 
 A noter que, sur toutes les visualisations de cette section, la fourchette 20 millions - 50 millions présente un anomalie : à chaque fois, elle suit la tendance inverse des fourchettes précédentes, quel que soit le facteur étudié.
 
-# Question 4
 
-En parcourant les différentes variables du jeu de données, la mise en relation des colonnes *price* désignant le prix d'un jeu et *pct_pos_total* correspondant à la note attribuée au jeu semblait intéressante. En effet, on s'attendrait à ce que plus on mette d'argent dans un jeu, meilleur il soit. 
+Afin de poursuivre notre analyse du dataset de jeux vidéos, nous nous efforcerons d'essayer de répondre à la question suivante : 
+
+# Quels sont les jeux les plus appréciés ?
+
+En parcourant les différentes variables du jeu de données, la mise en relation des colonnes *price* désignant le prix d'un jeu et *pct_pos_total* correspondant à la note attribuée au jeu semblait intéressante. En effet, on s'attendrait que plus on met de l'argent dans un jeu, mieux celui-ci devrait être. Cependant, il est compliqué de réellement de définir ce qu'est la qualité d'un jeu, ainsi nous nous baserons sur l'appréciation qu'ont les joueurs sur un jeu pour définir si le jeu est bien ou non.  
 
 D'où la question suivante : 
 
-#### Est-ce que le prix influence la qualité ?
+#### Est-ce que les jeux les plus appréciés sont ceux pour lesquels les joueurs paient le plus ?
 
-Tout d'abord, pour répondre à la question, nous avons exploré le jeu de données pour voir s'il était cohérent de représenter dans son entièreté un graphique mettant en relation prix et avis positifs des jeux. 
+Tout d'abord, pour répondre à la question, nous avons exploré le jeu de données pour voir s'il était cohérent de représenter dans son entièreté un graphique mettant en relation prix (*price*) et avis positif des jeux (*pct_pos_total*). 
 
-```{r exploration_prix, message=FALSE}
+```{r exploration_prix}
 
 # On ne conserve que les jeux qui ont une note
 reviews_prix <- jeux %>% filter(pct_pos_total > 0)
@@ -443,11 +454,13 @@ ggplot(reviews_prix, mapping = aes(x = price)) +
   labs(title = "Répartition du nombre de jeux en fonction du prix", x = "Prix ($)", y = "Nombre de jeux")
 ```
 
-Après exploration des données, on se rend compte qu'il y a très peu de jeux dont le prix est supérieur à 70 dollars, ainsi on décide d'écarter ces jeux pour avoir une meilleure visibilité de la tranche la plus représentée (jeux allant de la gratuité à 70 dollars). 
+Après exploration des données, on se rend compte qu'il y a très peu de jeux dont le prix est supérieur à 70 euros, ainsi on décide d'écarter ces jeux pour avoir une meilleure visibilité de la tranche la plus représentée (jeux allant de la gratuité jusqu'à 70 euros). Pour votre curiosité, les quelques jeux se situant aux alentours de 200 euros sont des jeux de puzzle en 3D et sont majoritairement mal notés donc on peut penser qu'ils ne valent pas leur prix.
+
+Regardons maintenant la distribution des notes données aux jeux par tranche de prix (inférieures à 70 euros) :
 
 ```{r qualite_prix}
 
-# On ne garde que les jeux possédant une note et dont le prix est inférieur à 70 dollars.
+# On ne garde que les jeux possédant une note et dont le prix est inférieur à 70 euros.
 reviews_prix <- jeux %>% filter(pct_pos_total > 0, price < 70)
 
 # Graphique présentant la distribution des notes données aux jeux par tranche de prix. (Mettre en relation avec un nuage de points les avis positifs avec les prix rendait le tout illisible.)
@@ -459,7 +472,11 @@ ggplot(reviews_prix, mapping = aes(x = cut(price, breaks = 14), y = pct_pos_tota
 
 ```
 
-D'après le graphique pour chaque tranche de prix, le pourcentage d'avis positif reste à priori le même. Ainsi, on ne peut pas vraiment dire que le prix influence la qualité d'un jeu. Cependant, est-il réellement intéressant de voir si le prix influence la qualité sans même savoir le nombre de notes qui ont été attribuées dans chaque tranche ? 
+On voit d'après le graphique que pour chaque tranche de prix, le pourcentage d'avis positif reste à priori le même. Ainsi, on ne peut pas vraiment dire qu'il y a de lien entre l'appréciation d'un jeu et son prix. Cependant, ce graphique ne nous indique pas à quel point la note d'un jeu sera fiable ou non car on ne connait pas la distribution du nombre de reviews pour chaque tranche de prix. En effet, une évaluation positive a peu d'intérêt si peu d'utilisateurs ont participé à celle-ci. D'où la question suivante : 
+
+#### Quel est le nombre de reviews moyen qui ont été attribuées pour chaque tranche de prix ? 
+
+On peut s'attendre à ce que le nombre de reviews moyen soit le même pour chaque tranche.
 
 ```{r nb_reviews_prix}
 
@@ -478,4 +495,115 @@ ggplot(reviews_prix, mapping = aes(x = cut(price, breaks = 14), y = num_reviews_
 
 On constate que plus le jeu est cher, plus on a d'avis et donc de notes à propos de celui-ci. Ainsi on peut imaginer que les notes qui sont attribuées à un jeu à prix élevé sont plus fiables (car plus nombreuses) que pour un jeu peu coûteux voire gratuit.
 
+En plus de regarder les prix, il est intéressant de surveiller l'évolution de l'appréciation des utilisateurs au fil du temps, ainsi nous allons utiliser les variables *pct_pos_total* et *release_date* afin de réponse à la question suivante : 
 
+### L'appréciation des jeux évolue t-elle au fil du temps ?
+
+Dans un premier temps, pour répondre à la question, il est important de connaître la répartition du nombre de jeux par année. On s'attend à ce que plus on avance dans le temps, plus il y a de jeux car, avec le temps, il est de plus en plus simple de concevoir son jeu.
+
+```{r qualite_nombre_jeux_temps}
+
+# On ne garde que les années aux dates
+reviews_prix$release_year <- substr(reviews_prix$release_date, 1, 4)
+
+# Histogramme de la répartition du nombre de jeux en fonction de l'année de sortie
+ggplot(reviews_prix, mapping = aes(x = release_year)) + 
+  geom_bar() +
+  labs(title = "Répartition du nombre de jeux en fonction de l'année de sortie", x = "Année", y = "Nombre de jeux") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # Les intervalles sont illisibles sinon
+
+# On souhaite connaître le nombre de jeux avec des reviews avant 2008 (non visible sur le graphique)
+reviews_prix %>% filter(release_year < 2008) %>% count()
+
+```
+On remarque qu'il n'y a que 30 jeux avec des reviews avant 2008, ainsi on s'intéressera aux jeux après cette année pour mieux analyser l'évolution des reviews positives de jeux. Pour ce qui est de l'évolution des reviews positives de jeux, on s'attend que plus on avance dans le temps, mieux les jeux seront notés car avec le temps, de nouvelles technologies apparaissent pour améliorer la qualité des jeux (meilleurs graphismes, meilleures IA).
+
+```{r qualite_jeux_temps}
+
+# On retire les jeux n'ayant pas du tout de reviews.
+jeux_to_evaluate <- reviews_prix %>% filter(pct_pos_total > 0, release_year > 2008)
+jeux_to_evaluate$release_year <- substr(jeux_to_evaluate$release_date, 1, 4)
+mean_by_year <- aggregate(pct_pos_total ~ release_year, data=jeux_to_evaluate, mean)
+
+# Graphique présentant la distribution du nombre de reviews des jeux par tranche de prix. 
+
+ggplot(mean_by_year, mapping = aes(x = release_year, y = pct_pos_total, group=1)) + 
+  geom_point() +
+  geom_line() + 
+  labs(title = "Évolution de la moyenne des reviews positives pour chaque année", y = "Pourcentage de reviews positives", x = "Année") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # Les intervalles sont illisibles sinon
+
+```
+Conformément à notre hypothèse, les jeux sont de mieux en mieux notés au fil des années. Cependant, on remarque qu'en 2014 et 2015, beaucoup de eux ont été mal notés, on peut donc imaginer un changement majeur dans les jeux dans ces années.
+
+En outre, une autre manière de comprendre quel type de jeu sont les plus appréciés est de regarder les genres et catégories d'où les questions suivantes : 
+
+### Quels genres sont les plus appréciés ? 
+
+Tout d'abord, on consulte la répartition des genres disponibles (nombre de reviews par genre et nombre de jeux par genre). Par la suite, on ne regardera la moyenne que sur des genres où on a assez de reviews (car une moyenne n'a pas de sens s'il n'y a pas assez de notes d'évaluation).
+
+```{r genres}
+# Pour mieux compter les genres
+jeux_genres_separes <- jeux %>% unnest(genres)
+
+# On retire les jeux qui n'ont pas de reviews
+jeux_genres_separes <- jeux_genres_separes %>% filter(pct_pos_total > 0, genres != "")
+
+# Graphique présentant la distribution du nombre de reviews des jeux par genre.
+ggplot(jeux_genres_separes, mapping = aes(x = genres, y = pct_pos_total, group = 1)) + 
+  geom_bar(stat = "identity") +
+  labs(title = "Nombre de reviews positives pour chaque genre", y = "Nombre de reviews positives", x = "Genre") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # Les intervalles sont illisibles sinon
+
+# Graphique présentant la distribution du nombre de jeux par genre. 
+ggplot(jeux_genres_separes, mapping = aes(x = genres)) + 
+  geom_bar() +
+  labs(title = "Nombre de jeux pour chaque genre", y = "Nombre de jeux", x = "Genre") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # Les intervalles sont illisibles sinon
+
+```
+
+En plus de voir les genres de jeux disponibles, on remarque que ces 2 graphiques ont la même forme : cela montre que peu importe le genre, les utilisateurs notent les jeux. Regardons dès à présent l'appréciation moyenne des jeux par genre.
+
+``` {r genres_2}
+
+# On garde uniquement les genres qui concernent + de 50 jeux (n'a pas de sens d'évaluer la moyenne sur un petit échantillon)
+genres_valides <- jeux_genres_separes %>% count(genres) %>% filter(n >= 50) %>% pull(genres)
+
+# On calcule la moyenne pour chaque genre
+mean_by_genre <- aggregate(pct_pos_total ~ genres, data=filter(jeux_genres_separes, genres %in% genres_valides), mean)
+
+# Graphique présentant la moyenne des reviews positives pour chaque genre
+ggplot(mean_by_genre, mapping = aes(x = genres, y = pct_pos_total, group = 1)) + 
+  geom_bar(stat = "identity") +
+  labs(title = "Moyenne des reviews positives pour chaque genre", y = "Pourcentage de reviews positives", x = "Genre") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # Les intervalles sont illisibles sinon
+
+```
+On constate que les genres les moins appréciés sont "Gore" et "Violent". On peut faire l'hypothèse que c'est parce que tout le monde n'est pas à l'aise avec de tels concepts. Les genres les plus appréciés sont "Adventure", "Casual" et "Indie". Il s'agit potentiellement de genres n'apportant pas de frustration aux joueurs ce qui peut expliquer le fait qu'ils soient aussi bien notés. 
+
+Il serait aussi intéressant de voir quels sont les genres où les joueurs passent le plus de temps.
+
+### Quels sont les genres où les joueurs passent le plus d'heure en moyenne ?
+
+On a vu précédemment qu'il n'y avait pas beaucoup de jeux du genre RPG mais ce type étant plutôt apprécié, on pourrait supposer que les personnes jouant à ce type de jeu jouent à très peu de jeux mais les apprécie beaucoup et par conséquent, y jouent beaucoup aussi.
+
+```{r genre_time}
+
+jeux_genres_separes <- jeux %>% unnest(genres)
+jeux_genres_separes <- jeux_genres_separes %>% filter(average_playtime_forever > 0)
+# On garde uniquement les genres qui concernent + de 50 jeux (n'a pas de sens d'évaluer la moyenne sur un petit échantillon)
+genres_valides <- jeux_genres_separes %>% count(genres) %>% filter(n >= 50) %>% pull(genres)
+
+# On calcule la moyenne pour chaque genre
+mean_by_genre <- aggregate(average_playtime_forever ~ genres, data=filter(jeux_genres_separes, genres %in% genres_valides), mean)
+
+# Graphique présentant la moyenne des temps moyens passés pour chaque genre
+ggplot(mean_by_genre, mapping = aes(x = genres, y = average_playtime_forever, group = 1)) + 
+  geom_bar(stat = "identity") +
+  labs(title = "Moyenne des temps passé en moyenne pour chaque genre", y = "Moyenne du temps passé sur les jeux", x = "Genre") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # Les intervalles sont illisibles sinon
+```
+
+Contrairement à nos attentes, le genre pour lequel les joueurs passent le plus de temps est "Utilities". Ce genre n'indique pas vraiment des jeux car après vérification, le type d'application présent dans ce genre sont des majoritairement des applications aidant à créer des jeux. Cela montre que les utilisateurs de steam ne sont pas seulement des joueurs mais qu'il y a aussi des développeurs qui passent beaucoup de temps sur les applications les aidant à créer leur jeu. Cela montre aussi que cela prend beaucoup plus de temps de créer un jeu que de jouer à celui-ci. 
+En outre, les genres plus liés aux joueurs de jeux vidéos, où les personnes passent le plus leur temps sont les jeux de simulation, les jeux multijoueurs et les jeux casuals. Ce résultat ne nous paraît pas si surprenant, la plupart des influenceurs gaming jouent à ce type de jeu et on peut imaginer que c'est leur influence qui fait que beaucoup de joueurs se retrouvent à jouer également. De plus, on remarque que les jeux les moins joués justement sont les jeux indés et les jeux de course. On peut imaginer que pour ce qui concerne les jeux indés, ils sont majoritairement plus courts à finir que les autres jeu
