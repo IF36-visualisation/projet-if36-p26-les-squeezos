@@ -20,7 +20,10 @@ jeux <- read.csv('../../games_march2025_cleaned.csv')
 # On transforme les fausses listes en véritables listes (genres, catégories)
 jeux <- jeux %>% mutate(
   genres = str_remove_all(genres, "\\[|\\]|'"), 
-  genres = str_split(genres, ",\\s*"))
+  genres = str_split(genres, ",\\s*"),
+  developers = str_remove_all(developers, "\\[|\\]|'"),
+  developers = str_split(developers, ",\\s*")
+  )
 
 # On transforme les chaînes de caractère "TRUE" et "FALSE" en booléens
 jeux <- jeux %>%
@@ -87,11 +90,8 @@ jeux$fourchettes_ordonnees <- factor(jeux$estimated_owners, levels = ordre_fourc
 labels_clean <- format_range(levels(jeux$fourchettes_ordonnees))
 
 # On crée un tableau permettant de voir combien de jeux sont associés à chaque fourchette
-nb_jeux_owners <- jeux %>%
-  count(fourchettes_ordonnees) %>%
-  mutate(
-    `Fourchette d'acheteurs` = format_range(as.character(fourchettes_ordonnees))
-  ) %>%
+nb_jeux_owners <- jeux %>% count(fourchettes_ordonnees) %>%
+  mutate(`Fourchette d'acheteurs` = format_range(as.character(fourchettes_ordonnees))) %>%
   select(`Fourchette d'acheteurs`, `Nombre de jeux` = n)
 
 # On affiche ce tableau
@@ -114,21 +114,13 @@ data <- jeux #%>% filter(estimated_owners != "0 - 0")
 #labels_clean <- labels_clean[labels_clean != "0 - 0"]
 
 # On crée des fourchettes de prix pour avoir un graphique lisible
-ordre_prix <- c(
-  "Gratuit",
-  paste0(seq(0, 35, 5), "–", seq(5, 40, 5), "$"),
-  "Plus de 40$"
-)
+ordre_prix <- c("Gratuit", paste0(seq(0, 35, 5), "–", seq(5, 40, 5), "$"), "Plus de 40$")
 
 # On ajoute une colonne à data contenant les fourchettes associées au prix de chaque jeu
 data$prix_cat <- cut(
   data$price,
   breaks = c(-0.01, 0, seq(5, 40, 5), Inf),
-  labels = c(
-    "Gratuit",
-    paste0(seq(0, 35, 5), "–", seq(5, 40, 5), "$"),
-    "Plus de 40$"
-  ),
+  labels = c("Gratuit", paste0(seq(0, 35, 5), "–", seq(5, 40, 5), "$"), "Plus de 40$"),
   include.lowest = TRUE
 )
 
@@ -147,8 +139,8 @@ ggplot(repartition, aes(x = fourchettes_ordonnees, y = n, fill = prix_cat)) +
   scale_fill_viridis_d() + # système de couleurs pour daltoniens
   
   labs(
-    title = "Répartition des prix selon le nombre de propriétaires",
-    x = "Nombre de propriétaires estimés",
+    title = "Répartition des prix selon le nombre d'acheteurs",
+    x = "Nombre d'acheteurs estimés",
     y = "Proportion de jeux",
     fill = "Prix"
   ) +
@@ -189,7 +181,7 @@ ggplot(repartition, aes(x = fourchettes_ordonnees, y = n, fill = age_cat)) +
   
   labs(
     title = "Répartition des âges selon le nombre d'acheteurs",
-    x = "Nombre de propriétaires estimés",
+    x = "Nombre d'acheteurs estimés",
     y = "Proportion de jeux",
     fill = "Âge requis"
   ) +
@@ -200,7 +192,7 @@ ggplot(repartition, aes(x = fourchettes_ordonnees, y = n, fill = age_cat)) +
 
 Sur ce graphique, on peut voir qu'il y a au moins un jeu pour lequel la limite d'âge est égale à -1. Une erreur a pu se glisser lors du nettoyage de notre jeu de données, nous allons donc y remédier maintenant.
 
-```{r age_filtre_ventes, message=FALSE}
+```{r zoom_age_ventes, message=FALSE}
 
 # On compte combien de jeux ont été vendus par fourchette de prix, par fourchette d'acheteurs
 repartition <- data %>%
@@ -219,7 +211,7 @@ repartition <- data %>%
 data_clean <- repartition %>%
 
   # Si une catégorie d'âge représente 5% ou moins dans une fourchette, on la remplace par "Autres"
-  mutate(age_cat = ifelse(proportion <= 0.05, "Autres", as.character(age_cat))) %>%
+  mutate(age_cat = ifelse(proportion <= 0.01, "Autres", as.character(age_cat))) %>%
 
   # Maintenant qu'on a de nouvelles catégories d'âge, on recalcule la répartition
   group_by(fourchettes_ordonnees, age_cat) %>%
@@ -239,7 +231,7 @@ ggplot(data_clean, aes(x = fourchettes_ordonnees, y = n, fill = age_cat)) +
   
   labs(
     title = "Répartition des âges selon le nombre d'acheteurs",
-    x = "Nombre de propriétaires estimés",
+    x = "Nombre d'acheteurs estimés",
     y = "Proportion de jeux",
     fill = "Âge requis"
   ) +
@@ -271,10 +263,7 @@ data$nb_langues <- stringr::str_count(data$supported_languages, ",") + 1
 repartition <- data %>% count(nb_langues, fourchettes_ordonnees)
 
 # On crée la visualisation
-ggplot(repartition,
-       aes(x = fourchettes_ordonnees,
-           y = n,
-           fill = factor(nb_langues))) +
+ggplot(repartition, aes(x = fourchettes_ordonnees, y = n, fill = factor(nb_langues))) +
   
   geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
   
@@ -283,7 +272,7 @@ ggplot(repartition,
   
   labs(
     title = "Répartition du nombre de langues supportées selon le nombre d'acheteurs",
-    x = "Nombre de propriétaires estimés",
+    x = "Nombre d'acheteurs estimés",
     y = "Proportion de jeux",
     fill = "Nombre de langues"
   ) +
@@ -297,18 +286,8 @@ Ce graphique est illisible, car il y a trop de nombres de langues supportées po
 
 ```{r echantillon_langues_ventes, fig.width=14, fig.height=10}
 
-# On fait la liste des langues quel'on veut analyser
-langues <- c(
-  "English",
-  "French",
-  "Spanish",
-  "Russian",
-  "Chinese",
-  "Arabic",
-  "Portuguese",
-  "Japanese",
-  "Korean"
-)
+# On fait la liste des langues que l'on veut analyser
+langues <- c("English", "French", "Spanish", "Russian", "Chinese", "Arabic", "Portuguese", "Japanese", "Korean")
 
 # On compte combien de jeux ont été vendus par langue, par fourchette d'acheteurs
 repartition <- bind_rows(
@@ -323,21 +302,13 @@ repartition <- bind_rows(
           str_detect(supported_languages,
                      paste0("\\b", langue, "\\b")),
           "Oui",
-          "Non"
-        )
-      ) %>% count(langue, fourchettes_ordonnees, supportee) # On fait la somme des jeux qui supportent chaque langue pour chaque fourchette d'acheteurs
+          "Non")) %>% 
+      count(langue, fourchettes_ordonnees, supportee) # On fait la somme des jeux qui supportent chaque langue pour chaque fourchette d'acheteurs
   })
 )
 
 # On crée la visualisation
-ggplot(
-  repartition,
-  aes(
-    x = fourchettes_ordonnees,
-    y = n,
-    fill = supportee
-  )
-) +
+ggplot(repartition, aes(x = fourchettes_ordonnees, y = n, fill = supportee)) +
   
   geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
   
@@ -348,7 +319,7 @@ ggplot(
   
   labs(
     title = "Répartition des langues supportées selon le nombre d'acheteurs",
-    x = "Nombre de propriétaires estimés",
+    x = "Nombre d'acheteurs estimés",
     y = "Proportion de jeux",
     fill = "Langue supportée ou non"
   ) +
@@ -397,8 +368,8 @@ ggplot(repartition, aes(x = fourchettes_ordonnees, y = n, fill = mois)) +
   scale_fill_viridis_d() + # système de couleurs pour daltoniens
   
   labs(
-    title = "Répartition des mois de sortie selon le nombre de propriétaires",
-    x = "Nombre de propriétaires estimés",
+    title = "Répartition des mois de sortie selon le nombre d'acheteurs",
+    x = "Nombre d'acheteurs estimés",
     y = "Proportion de jeux",
     fill = "Mois de sortie"
   ) +
@@ -424,14 +395,8 @@ os <- c("windows", "mac", "linux")
 # On calcule la répartition des jeux selon les systèmes d'exploitation supportés
 repartition <- bind_rows(
   lapply(os, function(systeme) {
-
-    data %>%
-      mutate(
-        systeme = systeme,
-        supporte = ifelse(.data[[systeme]], "Oui", "Non")
-      ) %>%
-      count(systeme, fourchettes_ordonnees, supporte)
-
+    data %>% mutate(systeme = systeme, supporte = ifelse(.data[[systeme]], "Oui", "Non")) 
+    %>% count(systeme, fourchettes_ordonnees, supporte)
   })
 )
 
@@ -444,8 +409,8 @@ ggplot(repartition, aes(x = fourchettes_ordonnees, y = n, fill = supporte)) +
   scale_fill_viridis_d() + # système de couleurs pour daltoniens
   
   labs(
-    title = "Répartition des systèmes d'exploitation selon le nombre de propriétaires",
-    x = "Nombre de propriétaires estimés",
+    title = "Répartition des systèmes d'exploitation selon le nombre d'acheteurs",
+    x = "Nombre d'acheteurs estimés",
     y = "Proportion de jeux",
     fill = "Système d'exploitation supporté ou non"
   ) +
@@ -460,32 +425,40 @@ Cette visualiation nous permet de voir clairement que la proportion de jeux sout
 
 On peut également remarquer que Windows soutient tous les jeux qui ont des acheteurs.
 
-## 6ème facteur : le publisher
+## 6ème facteur : le studio de développement
 
-Certains jeux tiennent leur réputation de leur studio de développement, comme les jeux de Riot Games qui ont suivi League of Legends ou ceux étant paru après OverWatch. Le studio de déeloppement peut donc être un facteur d'impact sur les ventes d'un jeu, ce qui révèle la question suivante : 
+Certains jeux tiennent leur réputation de leur studio de développement, comme les jeux de Riot Games qui ont suivi League of Legends ou ceux étant paru après OverWatch. Le studio de développement peut donc être un facteur d'impact sur les ventes d'un jeu, ce qui révèle la question suivante : 
 
 #### Est-ce que le studio de développement impacte la vente d'un jeu ?
 
-Etant donné qu'il existe des centaines de studios de développement et par souci de clareté, nous allons nous concentré sur les 10 plus grands et 10 plus petits stusios, pour voir s'il y a une différence notable entre ces 2 catégories.
+Etant donné qu'il existe des centaines de studios de développement et par souci de clareté, nous avons décidé de n'alayser que les plus grands studios, c'est-à-dire ceux qui ont les jeux les plus vendus. Nous allons donc voir quels studios ont développé les 10 jeux de la fourchette 50-100 millios d'acheteurs, et y ajouter les développeurs de Dota 2 et Counter Strike 2.
 
 ```{r dev_ventes}
 
-dev_counts <- data %>%
-  count(developers)
+# Pour éviter d'allourdir le code, on crée notre liste de fourchette hautes
+fourchettes_hautes <- c("50000000 - 100000000", "100000000 - 200000000", "200000000 - 500000000")
 
-data_dev <- data %>%
-  left_join(dev_counts, by = "developers") %>%
-  mutate(
-    taille_dev = case_when(
-      n == 1 ~ "1 jeu",
-      n <= 5 ~ "2 à 5 jeux",
-      n <= 20 ~ "6 à 20 jeux",
-      TRUE ~ "> 20 jeux"
-    )
-  )
+# Pour savoir quels sont les studios des jeux les plus vendus, on filtre dans data les developers des 3 fourchettes hautes
+studios_geants <- data %>%
+  filter(fourchettes_ordonnees %in% fourchettes_hautes) %>%
+  unnest(developers) %>% # On met un studio par ligne pour pouvoir compter correctement
+  distinct(developers) # On s'assure qu'il n'y a pas de duplicat de studio
+
+# On réunit les autres studios dans la catégorie "Autres studios"
+data_full <- data %>%
+  unnest(developers) %>%
+  mutate(studio = ifelse(developers %in% studios_geants$developers, developers, "Autres studios")) %>%
+  filter(!fourchettes_ordonnees %in% fourchettes_hautes) # On ne garde que les fourchette moyennes et basses, puisqu'on a extirpé les studios des fourchettes hautes
+
+# On calcule la répartition des jeux selon les studios de développement choisis précédemment
+repartition <- data_full %>%
+  count(fourchettes_ordonnees, studio) %>%
+  group_by(fourchettes_ordonnees) %>%
+  mutate(prop = n / sum(n)) %>%
+  ungroup()
 
 # On crée la visualisation
-ggplot(data_dev, aes(x = fourchettes_ordonnees, y = n, fill = taille_dev)) +
+ggplot(repartition, aes(x = fourchettes_ordonnees, y = prop, fill = studio)) +
   
   geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
   
@@ -493,8 +466,44 @@ ggplot(data_dev, aes(x = fourchettes_ordonnees, y = n, fill = taille_dev)) +
   scale_fill_viridis_d() + # système de couleurs pour daltoniens
   
   labs(
-    title = "Répartition des développeurs selon le nombre de propriétaires",
-    x = "Nombre de propriétaires estimés",
+    title = "Répartition des développeurs selon le nombre d'acheteurs",
+    x = "Nombre d'acheteurs estimés",
+    y = "Proportion de jeux",
+    fill = "Développeurs"
+  ) +
+  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On penche l'axe des x pour pouvoir lire les fourchettes
+
+```
+
+Ce graphique nous montre que la très grande majorité plupart des jeux achetés proviennent de studios différents de ceux ayant développés les 12 jeux les plus vendus de Steam.
+Cela tend à montrer que le studio de développement n'a pas d'impact sur les ventes d'un jeu.
+Pour en être sûrs, nous allon enlever les studios qui n'ont qu'un très faible portion des répartitions, pour n'avoir que ceux qui ont plus d'0.5% des parts.
+
+```{r zoom_dev_ventes}
+
+# On recalcule notre répartition en s'assurant de ne prendre en compte que l'es studios ayant une part supérieure ou égale à 0.5% des parts de chaque fourchette d'acheteurs
+repartition_clean <- repartition %>%
+  mutate(
+    studio = ifelse(prop <= 0.005, "Autres studios", studio)
+  ) %>%
+  group_by(fourchettes_ordonnees, studio) %>%
+  summarise(n = sum(n), .groups = "drop") %>%
+  group_by(fourchettes_ordonnees) %>%
+  mutate(prop = n / sum(n)) %>%
+  ungroup()
+
+# On crée la visualisation
+ggplot(repartition_clean, aes(x = fourchettes_ordonnees, y = prop, fill = studio)) +
+  
+  geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
+  
+  scale_x_discrete(labels = labels_clean) + # On affiche les fourchettes "au propore" (10M au lieu de 10000000)
+  scale_fill_viridis_d() + # système de couleurs pour daltoniens
+  
+  labs(
+    title = "Répartition des développeurs selon le nombre d'acheteurs",
+    x = "Nombre d'acheteurs estimés",
     y = "Proportion de jeux",
     fill = "Développeur"
   ) +
@@ -503,9 +512,10 @@ ggplot(data_dev, aes(x = fourchettes_ordonnees, y = n, fill = taille_dev)) +
 
 ```
 
-Cette visualiation nous permet de voir clairement que la proportion de jeux soutenus par les 3 systèmes d'exploitation augmente avec les fourchettes d'acheteurs. On peut donc en déduire que les ventes d'un jeu ont un lien avec le ou les systèmes d'exploitation qui le soutiennent.
+Cette visualiation nous permet de voir clairement que parmi les 19 studios de développement cités précédemment, 1 seul parvient à se démarquer : Valve. En effet, sur les 3 plus grandes fourchettes d'acheteurs, Valve représente environ 5% des jeux achetés, ce qui signifie que 5% des jeux ayant entre 5 et 50 millions d'acheteurs ont été développés par Valve.
 
-On peut également remarquer que Windows soutient tous les jeux qui ont des acheteurs.
+Cependant, malgré cette nette démarcation, l'absence d'augmentation réelle et la présence d'un seul studio de développement tend à montrer qu'un studio de développement n'impacte pas la vente d'un jeu.
+
 
 
 ## Conclusion
