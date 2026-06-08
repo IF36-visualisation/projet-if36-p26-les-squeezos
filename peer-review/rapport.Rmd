@@ -7,7 +7,7 @@ output:
     theme: cayman
 ---
 
-```{r initialisation, message=FALSE}
+```{r initialisation, message=FALSE, warning=FALSE}
 library(ggplot2)
 library(dplyr)
 library(stringr)
@@ -18,10 +18,17 @@ library(tidyverse)
 jeux <- read.csv('../../games_march2025_cleaned.csv')
 
 # On transforme les fausses listes en véritables listes (genres, catégories)
-
 jeux <- jeux %>% mutate(
   genres = str_remove_all(genres, "\\[|\\]|'"), 
   genres = str_split(genres, ",\\s*"))
+
+# On transforme les chaînes de caractère "TRUE" et "FALSE" en booléens
+jeux <- jeux %>%
+  mutate(
+    windows = as.logical(windows),
+    mac     = as.logical(mac),
+    linux   = as.logical(linux)
+  )
 
 ```
 
@@ -40,14 +47,6 @@ Cela soulève naturellement la question suivante :
 #### Parmi ces trois systèmes d’exploitation, lequel prend en charge le plus grand nombre de jeux ?
 
 ```{r sys_expl}
-
-# On transforme les chaînes de caractère "TRUE" et "FALSE" en booléens
-jeux <- jeux %>%
-  mutate(
-    windows = as.logical(windows),
-    mac     = as.logical(mac),
-    linux   = as.logical(linux)
-  )
 
 # On crée un tableau avec, pour chaque système d'exploitation, la somme des 1, soit le nombre de True
 nb_jeux_sys_ex <- data.frame(
@@ -221,7 +220,7 @@ ggplot(repartition, aes(x = fourchettes_ordonnees, y = n, fill = prix_cat)) +
   geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
   
   scale_x_discrete(labels = labels_clean) + # On affiche les fourchettes "au propore" (10M au lieu de 10000000)
-  scale_fill_viridis_d() + # système de couleur pour daltoniens
+  scale_fill_viridis_d() + # système de couleurs pour daltoniens
   
   labs(
     title = "Répartition des prix selon le nombre de propriétaires",
@@ -258,7 +257,7 @@ ggplot(repartition, aes(x = fourchettes_ordonnees, y = n, fill = age_cat)) +
   geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
   
   scale_x_discrete(labels = labels_clean) + # On affiche les fourchettes "au propore" (10M au lieu de 10000000)
-  scale_fill_viridis_d() + # système de couleur pour daltoniens
+  scale_fill_viridis_d() + # système de couleurs pour daltoniens
   
   labs(
     title = "Répartition des âges selon le nombre d'acheteurs",
@@ -296,7 +295,7 @@ ggplot(repartition,
   geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
   
   scale_x_discrete(labels = labels_clean) + # On affiche les fourchettes "au propore" (10M au lieu de 10000000)
-  scale_fill_viridis_d() + # système de couleur pour daltoniens
+  scale_fill_viridis_d() + # système de couleurs pour daltoniens
   
   labs(
     title = "Répartition du nombre de langues supportées selon le nombre d'acheteurs",
@@ -359,7 +358,7 @@ ggplot(
   geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
   
   scale_x_discrete(labels = labels_clean) + # On affiche les fourchettes "au propore" (10M au lieu de 10000000)
-  scale_fill_viridis_d() + # système de couleur pour daltoniens
+  scale_fill_viridis_d() + # système de couleurs pour daltoniens
   
   facet_wrap(~ langue) + # On fait une grille de visualisation montrant les 9 langues étudiées
   
@@ -409,7 +408,7 @@ ggplot(repartition, aes(x = fourchettes_ordonnees, y = n, fill = mois)) +
   geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
   
   scale_x_discrete(labels = labels_clean) + # On affiche les fourchettes "au propore" (10M au lieu de 10000000)
-  scale_fill_viridis_d() + # système de couleur pour daltoniens
+  scale_fill_viridis_d() + # système de couleurs pour daltoniens
   
   labs(
     title = "Répartition des mois de sortie selon le nombre de propriétaires",
@@ -422,6 +421,58 @@ ggplot(repartition, aes(x = fourchettes_ordonnees, y = n, fill = mois)) +
 ```
 
 Cette visualisation ne nous permet pas de conclure qoi que ce soit, puisque la proportion de jeux par fourchette d'acheteur ne varie pas ou très peu selon le mois de publication.
+
+## 5ème facteur : le système d'exploitation
+
+Un autre facteur peut avoir un rôle important lors de l'achat d'un jeu : le système d'exploitaion. En effet, si une personne a un Mac et qu'un jeu n'est pas supporté par ce système, il y a peu de chances qu'elle l'achète, à moins de faire une machine virtuelle, ce qui est fastidieux. Inversement pour une personne qui a un ordinateur avec le système Winodws et qui souhaite acheter un jeu soutenu exclusivement par Max.
+
+Cela soulève naturellement la question suivante :
+
+#### Est-ce que le système d'exploitation impacte la vente d'un jeu ?
+
+```{r sys_expl_ventes, fig.width=14, fig.height=10}
+
+# On crée une liste des systèmes d'exploitation étudiés
+os <- c("windows", "mac", "linux")
+
+# On calcule la répartition des jeux selon les systèmes d'exploitation supportés
+repartition <- bind_rows(
+  lapply(os, function(systeme) {
+
+    data %>%
+      mutate(
+        systeme = systeme,
+        supporte = ifelse(.data[[systeme]], "Oui", "Non")
+      ) %>%
+      count(systeme, fourchettes_ordonnees, supporte)
+
+  })
+)
+
+# On crée la visualisation
+ggplot(repartition, aes(x = fourchettes_ordonnees, y = n, fill = supporte)) +
+  
+  geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
+  
+  scale_x_discrete(labels = labels_clean) + # On affiche les fourchettes "au propore" (10M au lieu de 10000000)
+  scale_fill_viridis_d() + # système de couleurs pour daltoniens
+  
+  labs(
+    title = "Répartition des systèmes d'exploitation selon le nombre de propriétaires",
+    x = "Nombre de propriétaires estimés",
+    y = "Proportion de jeux",
+    fill = "Système d'exploitation supporté ou non"
+  ) +
+  
+  facet_wrap(~ systeme) +
+  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On penche l'axe des x pour pouvoir lire les fourchettes
+
+```
+
+Cette visualiation nous permet de voir clairement que la proportion de jeux soutenus par les 3 systèmes d'exploitation augmente avec les fourchettes d'acheteurs. On peut donc en déduire que les ventes d'un jeu ont un lien avec le ou les systèmes d'exploitation qui le soutiennent.
+
+On peut également remarquer que Windows soutient tous les jeux qui ont des acheteurs.
 
 
 ## Conclusion
