@@ -41,7 +41,7 @@ Notre jeu de données regroupe une grande partie des jeux publiés par Steam, av
 Il provient du site Kaggle, nous avons choisi ce jeu en particulier pour sa richesse (89618 observations et 47 variables) et pour sa récence (les données datent de mars 2025).
 Étant tous des joueurs dans le groupe, cela nous paraît intéressant de voir les données concernant nos jeux préférés.
 
-# Les différents facteurs pouvant avoir un impact sur la vente des jeux
+# Y a-t-il des facteurs qui augmentent le nombre de ventes d'un jeu ?
 
 Avant même de regarder ces facteurs, il est important de savoir combien de jeux appartiennt à chaque fourchette d'acheteurs pour pouvoir faire des analyses pertinentes plus tard.
 
@@ -395,8 +395,14 @@ os <- c("windows", "mac", "linux")
 # On calcule la répartition des jeux selon les systèmes d'exploitation supportés
 repartition <- bind_rows(
   lapply(os, function(systeme) {
-    data %>% mutate(systeme = systeme, supporte = ifelse(.data[[systeme]], "Oui", "Non")) 
-    %>% count(systeme, fourchettes_ordonnees, supporte)
+
+    data %>%
+      mutate(
+        systeme = systeme,
+        supporte = ifelse(.data[[systeme]] == TRUE, "Oui", "Non")
+      ) %>%
+      count(systeme, fourchettes_ordonnees, supporte)
+
   })
 )
 
@@ -516,7 +522,98 @@ Cette visualiation nous permet de voir clairement que parmi les 19 studios de d�
 
 Cependant, malgré cette nette démarcation, l'absence d'augmentation réelle et la présence d'un seul studio de développement tend à montrer qu'un studio de développement n'impacte pas la vente d'un jeu.
 
+```{r genres_ventes}
 
+data_genres <- data %>% unnest(genres)
+
+repartition <- data_genres %>% count(genres, fourchettes_ordonnees)
+
+# On crée la visualisation
+ggplot(repartition, aes(x = fourchettes_ordonnees, y = n, fill = genres)) +
+  
+  geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
+  
+  scale_x_discrete(labels = labels_clean) + # On affiche les fourchettes "au propore" (10M au lieu de 10000000)
+  scale_fill_viridis_d() + # système de couleurs pour daltoniens
+  
+  labs(
+    title = "Répartition des genres selon le nombre d'acheteurs",
+    x = "Nombre d'acheteurs estimés",
+    y = "Proportion de jeux",
+    fill = "Genre"
+  ) +
+  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On penche l'axe des x pour pouvoir lire les fourchettes
+
+```
+
+Comme pour les graphiques précédents, le nombre de genres empêche une bonne lisibilité, nous allons donc retirer ceux qui ne font que gêner la compréhension de la légende.
+
+```{r zoom_genres_ventes}
+
+repartition <- data_genres %>%
+  count(genres, fourchettes_ordonnees) %>%
+  group_by(fourchettes_ordonnees) %>%
+  mutate(prop = n / sum(n)) %>%
+  ungroup()
+
+repartition_clean <- repartition %>%
+  mutate(
+    genres = ifelse(prop < 0.05, "Autres", genres)
+  ) %>%
+  group_by(fourchettes_ordonnees, genres) %>%
+  summarise(n = sum(n), .groups = "drop") %>%
+  group_by(fourchettes_ordonnees) %>%
+  mutate(prop = n / sum(n)) %>%
+  ungroup()
+
+# On crée la visualisation
+ggplot(repartition_clean, aes(x = fourchettes_ordonnees, y = prop, fill = genres)) +
+  
+  geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
+  
+  scale_x_discrete(labels = labels_clean) + # On affiche les fourchettes "au propore" (10M au lieu de 10000000)
+  scale_fill_viridis_d() + # système de couleurs pour daltoniens
+  
+  labs(
+    title = "Répartition des genres selon le nombre d'acheteurs",
+    x = "Nombre d'acheteurs estimés",
+    y = "Proportion de jeux",
+    fill = "Genre"
+  ) +
+  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On penche l'axe des x pour pouvoir lire les fourchettes
+
+```
+
+
+```{r categories_ventes}
+
+data_categories <- data %>%
+  mutate(categories = str_remove_all(categories, "\\[|\\]|'")) %>%  # enlève [], '
+  mutate(categories = str_split(categories, ",\\s*")) %>%   # transforme en liste 
+  unnest(categories)
+
+repartition <- data_categories %>% count(categories, fourchettes_ordonnees)
+
+# On crée la visualisation
+ggplot(repartition, aes(x = fourchettes_ordonnees, y = n, fill = categories)) +
+  
+  geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
+  
+  scale_x_discrete(labels = labels_clean) + # On affiche les fourchettes "au propore" (10M au lieu de 10000000)
+  scale_fill_viridis_d() + # système de couleurs pour daltoniens
+  
+  labs(
+    title = "Répartition des catégories selon le nombre d'acheteurs",
+    x = "Nombre d'acheteurs estimés",
+    y = "Proportion de jeux",
+    fill = "Catégories"
+  ) +
+  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On penche l'axe des x pour pouvoir lire les fourchettes
+
+```
 
 ## Conclusion
 
