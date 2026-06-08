@@ -38,83 +38,6 @@ Notre jeu de données regroupe une grande partie des jeux publiés par Steam, av
 Il provient du site Kaggle, nous avons choisi ce jeu en particulier pour sa richesse (89618 observations et 47 variables) et pour sa récence (les données datent de mars 2025).
 Étant tous des joueurs dans le groupe, cela nous paraît intéressant de voir les données concernant nos jeux préférés.
 
-# Question 1
-
-L’une des premières observations issues de notre jeu de données concerne les colonnes *Windows*, *Linux* et *Mac*, qui correspondent aux trois systèmes d’exploitation les plus répandus dans le monde.
-
-Cela soulève naturellement la question suivante :
-
-#### Parmi ces trois systèmes d’exploitation, lequel prend en charge le plus grand nombre de jeux ?
-
-```{r sys_expl}
-
-# On crée un tableau avec, pour chaque système d'exploitation, la somme des 1, soit le nombre de True
-nb_jeux_sys_ex <- data.frame(
-  sys_ex = c("Windows", "Mac", "Linux"),
-  nb = c(
-    sum(jeux$windows),
-    sum(jeux$mac),
-    sum(jeux$linux)
-  )
-)
-
-# On crée la visualisation correspondante : un bar chart avec la somme des jeux pour chaque système d'exploitation, sans oublier le titre
-ggplot(data = nb_jeux_sys_ex, mapping = aes(x = sys_ex, y = nb, fill = sys_ex)) +
-  geom_col() +
-  geom_text(aes(label = nb), vjust = -0.5) +
-  labs(title = "Nombre de jeux supportés par les différents systèmes d'exploitation", 
-       x = "Système d'exploitation", y = "Nombre de jeux") +
-  theme(legend.position = "none") # La légende n'est pas nécessaire puisque chaque couleur est associée à un système, donc le nom est indiqué sous chaque barre.
-```
-
-L’analyse montre clairement que Windows domine largement les autres. En effet, il propose environ cinq fois plus de jeux que Mac et sept fois plus que Linux.
-
-# Question 2
-
-La deuxième observation de notre jeu de données concerne les colonnes *average_playtime_forever* et *price*, qui correspondent au temps de jeu moyen des joueurs et au prix des jeux.
-
-La question soulevée par ces colonnes est la suivante :
-
-#### Les joueurs passent-ils plus de temps sur les jeux payant ou sur les jeux gratuits ?
-
-```{r payants_gratuits}
-
-# On filtre les jeux pour n'avoir que les gratuits
-jeux_gratuits <- filter(jeux,price == 0.00)
-
-# On calcule la moyenne des heures de jeu
-jeux_gratuits <- jeux_gratuits %>%
-  
-# On fait la moyenne du temps de jeu moyen pour les les jeux gratuits
-transmute(average_playtime_forever=(mean(average_playtime_forever))) %>% 
-
-# La fonction distinct nous assure d'avoir une seule valeur
-distinct() 
-
-# On filtre les jeux pour n'avoir que les payants
-jeux_payants <- filter(jeux,price > "0.0")
-
-# On calcule la moyenne des heures de jeu
-jeux_payants <- jeux_payants %>%
-
-# Comme pour les jeux gratuits, on fais la moyenne du temps de jeu pour tous les jeux payants et on s'assure d'avoir une seule valeur avec la fonction distinct
-transmute(average_playtime_forever=(mean(average_playtime_forever))) %>% distinct()
-
-# On fusionne les moyennes en un seul dataframe
-tps_jeu_moyen <- rbind(jeux_gratuits,jeux_payants)
-
-# On fait la visualisation correspondante, c'est-à-dire un bar chart avec le nombre moyen d'heures de jeu sur les différentes catégories de jeux (gratuit et payant)
-ggplot(tps_jeu_moyen, aes(x = c("Jeux gratuits", "Jeux payants"), y = average_playtime_forever , fill = c("Jeux gratuits", "Jeux payants"))) +
-  geom_bar(stat='identity') +
-  ggtitle("Nombre moyen d'heures de jeu en fonction de la gratuité des jeux") + 
-  labs(x = "Gratuité des jeux", y = "Nombre moyen d'heures de jeu") + 
-  theme(legend.position = "none") + # Il n'y a pas besoin de légende pour cette visualisation puisque les couleurs différencient les catégories de jeux et il y a le nom des catégories sous les barres correspondantes
-  scale_fill_manual(values = c("#55E250","#1F96E0")) # On met de la couleur pour différencier les catégories
-```
-
-Sur le graphe ci-dessus, on peut voir qu'en moyenne les joueurs jouent deux fois plus longtemps aux jeux payants qu'aux jeux gratuits.
-Cette différence peut s'expliquer par la différence de coût pour faire l'acquisition des jeux constituant ces différentes catégories.
-
 # Les différents facteurs pouvant avoir un impact sur la vente des jeux
 
 Avant même de regarder ces facteurs, il est important de savoir combien de jeux appartiennt à chaque fourchette d'acheteurs pour pouvoir faire des analyses pertinentes plus tard.
@@ -175,7 +98,8 @@ nb_jeux_owners <- jeux %>%
 nb_jeux_owners
 ```
 
-On voit ici qu'il n'y a que 2 jeux qui ont plus de 100 millions d'acheteurs, ce qui signifie que les 2 dernières fourchettes ne sont pas comparables aux autres. On peut se poser cette même question de pertinence pour les 3 fourchettes précédentes, qui ont moins d'une centaines de jeux associés
+On voit ici qu'il n'y a que 2 jeux qui ont plus de 100 millions d'acheteurs, ce qui signifie que les 2 dernières fourchettes ne sont pas comparables aux autres. Ces 2 jeux sont Dota 2 et Counter Strike 2.
+Les 3 fourchettes précédentes ont également très peu de jeux pour les représenter lors des prochaines analyse, on compte en effet, moins d'une centaines de jeux associés.
 
 ## 1er facteur : le prix
 
@@ -186,8 +110,8 @@ L'un des premiers facteurs qui nous vient à l'esprit serait le prix, nous allon
 ```{r prix_ventes}
 
 # On ne garde que les gens qui ont été achetés
-data <- jeux %>% filter(estimated_owners != "0 - 0")
-labels_clean <- labels_clean[labels_clean != "0 - 0"]
+data <- jeux #%>% filter(estimated_owners != "0 - 0")
+#labels_clean <- labels_clean[labels_clean != "0 - 0"]
 
 # On crée des fourchettes de prix pour avoir un graphique lisible
 ordre_prix <- c(
@@ -239,9 +163,13 @@ Fait plus étonnant, le nombre de jeux de plus de 40$ augmente également avec l
 
 Nous pouvons également voir que la variété des prix diminue avec le nombre d'acheteurs. Plus les tranches sont élevées, moins il y a de fourchettes de prix différentes. Je ne vois pas d'explication à ce phénomène.
 
-Toutes ces observatios nous permette de supposer que le prix a certes un impact sur les ventes, mais d'autres facteurs entrent sûrement en jeu lor de l'achat d'un jeu vidéo.
+Toutes ces observatios nous permette de supposer que le prix a certes un impact sur les ventes, mais d'autres facteurs entrent sûrement en jeu lors de l'achat d'un jeu vidéo.
 
 ## 2ème facteur : la limite d'âge
+
+Lorsque l'on achète un jeu, il n'est pas rare qu'une limite d'âge soit affichée, que ce soit pour prévenir de la vulgarité, de la violence ou de l' peur provoquée chez le joueur. Cette limite d'âge peut reprsésenter un frein lors de l'achat d'un jeu, du moins c'est ce que nous aimerions savoir avec la visualisation qui suit, qui nous permettrait de répondre à la question suivante : 
+
+#### La limite d'âge d'un jeu a-t-elle un impact sur ses ventes ?
 
 ```{r age_ventes}
 
@@ -270,7 +198,63 @@ ggplot(repartition, aes(x = fourchettes_ordonnees, y = n, fill = age_cat)) +
 
 ```
 
-Au vu du graphique ci-dessus, il paraît difficile de tirer des informations pertinentes pour savoir si la restiction d'âge a un impact sur le nombre de ventes d'un jeu ou non.
+Sur ce graphique, on peut voir qu'il y a au moins un jeu pour lequel la limite d'âge est égale à -1. Une erreur a pu se glisser lors du nettoyage de notre jeu de données, nous allons donc y remédier maintenant.
+
+```{r age_filtre_ventes, message=FALSE}
+
+# On compte combien de jeux ont été vendus par fourchette de prix, par fourchette d'acheteurs
+repartition <- data %>%
+  count(fourchettes_ordonnees, age_cat) %>%
+
+  # Pour chaque fourchette d'acheteurs...
+  group_by(fourchettes_ordonnees) %>%
+
+  # On calcule la proportion de chaque âge : proportion = part de age_cat / tous les jeux de la fourchette
+  mutate(proportion = n / sum(n)) %>%
+
+  # On enlève le regroupement pour pouvoir retravailler librement les données ensuite
+  ungroup()
+
+# On crée une version "nettoyée" des données pour le graphique
+data_clean <- repartition %>%
+
+  # Si une catégorie d'âge représente 5% ou moins dans une fourchette, on la remplace par "Autres"
+  mutate(age_cat = ifelse(proportion <= 0.05, "Autres", as.character(age_cat))) %>%
+
+  # Maintenant qu'on a de nouvelles catégories d'âge, on recalcule la répartition
+  group_by(fourchettes_ordonnees, age_cat) %>%
+
+  # On recalcule le nombre de jeux après regroupement
+  summarise(n = sum(n))
+
+data_clean$age_cat <- factor(data_clean$age_cat, levels = rev(sort(unique(data_clean$age_cat))))
+
+# On crée la visualisation
+ggplot(data_clean, aes(x = fourchettes_ordonnees, y = n, fill = age_cat)) +
+  
+  geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
+  
+  scale_x_discrete(labels = labels_clean) + # On affiche les fourchettes "au propore" (10M au lieu de 10000000)
+  scale_fill_viridis_d() + # système de couleurs pour daltoniens
+  
+  labs(
+    title = "Répartition des âges selon le nombre d'acheteurs",
+    x = "Nombre de propriétaires estimés",
+    y = "Proportion de jeux",
+    fill = "Âge requis"
+  ) +
+  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On penche l'axe des x pour pouvoir lire les fourchettes
+
+```
+
+Le graphique ci-dessus nous permet de voir que la grande majorité des jeux n'ont pas de limite d'âge.
+
+De plus, il semblerait que plus la fourchette d'acheteurs augmente, plus le nombre de jeux avec un âge limite élevé augmente.
+
+Cette constatation va à l'encontre de notre hypothèse, puisque nous pensions qu'un jeu avec un âge limite bas serait accessible à un plus grand nombre de joueurs et donc plus acheté.
+Mais ici, on voit qu'à partir de la fourchette 2-5 millions d'acheteurs, près d'un quart des jeux ont une limite d'âge supérieure ou égale à 17 ans. 
+Cela pourrait s'expliquer par le fait que beaucoup de jeux populaires ont cette limite d'âge, comme Grand Theft Auto V, Call of Duty ou Red Dead Redemption 2.
 
 ## 3ème facteur : les langues supportées
 
@@ -374,7 +358,9 @@ ggplot(
 
 ```
 
-Grâce à cette visualisation, nous voyons bien que le nombre de langues supportées est corrélé aux nombre ventes. En effet, quelle que soit la langue, la proportion de jeux la supportant augmente avec le nombre d'acheteurs.
+Grâce à cette visualisation, nous voyons bien que le nombre de langues supportées est corrélé aux nombre de ventes. En effet, quelle que soit la langue, la proportion de jeux la supportant augmente avec le nombre d'acheteurs.
+
+Nous pouvons également constater que ne supportent pas la langue arabe, ce qui ne les empêche pas d'avoir les meilleures ventes.
 
 ## 4ème facteur : la date de publication
 
@@ -465,6 +451,53 @@ ggplot(repartition, aes(x = fourchettes_ordonnees, y = n, fill = supporte)) +
   ) +
   
   facet_wrap(~ systeme) +
+  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On penche l'axe des x pour pouvoir lire les fourchettes
+
+```
+
+Cette visualiation nous permet de voir clairement que la proportion de jeux soutenus par les 3 systèmes d'exploitation augmente avec les fourchettes d'acheteurs. On peut donc en déduire que les ventes d'un jeu ont un lien avec le ou les systèmes d'exploitation qui le soutiennent.
+
+On peut également remarquer que Windows soutient tous les jeux qui ont des acheteurs.
+
+## 6ème facteur : le publisher
+
+Certains jeux tiennent leur réputation de leur studio de développement, comme les jeux de Riot Games qui ont suivi League of Legends ou ceux étant paru après OverWatch. Le studio de déeloppement peut donc être un facteur d'impact sur les ventes d'un jeu, ce qui révèle la question suivante : 
+
+#### Est-ce que le studio de développement impacte la vente d'un jeu ?
+
+Etant donné qu'il existe des centaines de studios de développement et par souci de clareté, nous allons nous concentré sur les 10 plus grands et 10 plus petits stusios, pour voir s'il y a une différence notable entre ces 2 catégories.
+
+```{r dev_ventes}
+
+dev_counts <- data %>%
+  count(developers)
+
+data_dev <- data %>%
+  left_join(dev_counts, by = "developers") %>%
+  mutate(
+    taille_dev = case_when(
+      n == 1 ~ "1 jeu",
+      n <= 5 ~ "2 à 5 jeux",
+      n <= 20 ~ "6 à 20 jeux",
+      TRUE ~ "> 20 jeux"
+    )
+  )
+
+# On crée la visualisation
+ggplot(data_dev, aes(x = fourchettes_ordonnees, y = n, fill = taille_dev)) +
+  
+  geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
+  
+  scale_x_discrete(labels = labels_clean) + # On affiche les fourchettes "au propore" (10M au lieu de 10000000)
+  scale_fill_viridis_d() + # système de couleurs pour daltoniens
+  
+  labs(
+    title = "Répartition des développeurs selon le nombre de propriétaires",
+    x = "Nombre de propriétaires estimés",
+    y = "Proportion de jeux",
+    fill = "Développeur"
+  ) +
   
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On penche l'axe des x pour pouvoir lire les fourchettes
 
