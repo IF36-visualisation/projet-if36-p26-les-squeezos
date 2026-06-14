@@ -7,15 +7,23 @@ output:
     theme: cayman
 ---
 
-```{r initialisation, message=FALSE, warning=FALSE}
+```{r library, message=FALSE, warning=FALSE}
 library(ggplot2)
 library(dplyr)
 library(stringr)
 library(viridis)
 library(tidyverse)
+```
 
+Le fichier contient de nombreuses observations que nous allons pas utiliser. Pour la rapidité de calcul et la légèreté du fichier, nous allons les supprimer de notre jeu de données.
+
+```{r initialisation, message=FALSE, warning=FALSE}
 # Le fichier étant trop lourd pour GitHub, il n'est pas dans le dossier partagé, mais sur nos ordinateurs, d'où le '../..' au lieu de '../data'
 jeux <- read.csv('../../games_march2025_cleaned.csv')
+
+jeux2 <- jeux %>% select(-c(dlc_count, detailed_description, about_the_game, short_description, reviews, header_image, website, support_url, support_email, metacritic_url, achievements, notes, packages, screenshots, movies, peak_ccu, tags))
+
+write.csv(jeux2, "../data/jeux_alleges.csv", row.names = FALSE)
 
 # On transforme les fausses listes en véritables listes (genres, catégories)
 jeux <- jeux %>% mutate(
@@ -34,6 +42,8 @@ jeux <- jeux %>%
   )
 
 ```
+
+
 
 # Introduction
 
