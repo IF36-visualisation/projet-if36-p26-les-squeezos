@@ -93,14 +93,14 @@ Le fichier contient de nombreuses variables que nous n'allons pas utiliser, tell
 
 ```
 
-Comme nous l'avons vu dans le tableau décrivant chaque donée, certaines d'entre elles ne sont pas du bon format d'après RStudio, comme *realease_date* et les différents systèmes d'exploitaion, qui sont tous des chaînes de caractère alors qu'ils devraient être respectivement des dates et des booléens. De plus, les genres, les studios de développeurs et les catégories, que nous allons utiliser par la suite, sont également considérés comme des chaînes de caractère, alors que ce sont des listes. Il faut donc corriger cela. 
+Comme nous l'avons vu dans le tableau décrivant chaque donée, certaines d'entre elles ne sont pas du bon format d'après RStudio, comme *realease_date* et les différents systèmes d'exploitaion, qui sont tous des chaînes de caractère alors qu'ils devraient être respectivement des dates et des booléens. De plus, les genres, les studios de développement et les catégories, que nous allons utiliser par la suite, sont également considérés comme des chaînes de caractère, alors que ce sont des listes. Il faut donc corriger cela. 
 
 ```{r initialisation, message=FALSE, warning=FALSE}
 
 # On récupère les données de notre jeu allégé
 jeu_allege <- read.csv('../data/jeux_alleges.csv')
 
-# On transforme les fausses listes en véritables listes (genres, studio de développeurs, langues supportées)
+# On transforme les fausses listes en véritables listes (genres, studio de développement, langues supportées)
 jeu_allege <- jeu_allege %>% mutate(
   genres = str_remove_all(genres, "\\[|\\]|'"), 
   genres = str_split(genres, ",\\s*"),
@@ -276,7 +276,7 @@ Lorsque l'on achète un jeu, il n'est pas rare qu'une limite d'âge soit affich�
 
 #### La limite d'âge d'un jeu a-t-elle un impact sur ses ventes ?
 
-Etant donnée qu'il y a beauoup de limites d'âge, un line chart serait illisible. Nous allons donc changer de visualisation. Un bar chart pourrait être utilisé, mais on ne verrait pas bien toutes les proportions. Une heat map nous paraît donc être le meilleur choix pour concilier grande masse d'informations et lisibilité.
+Pour y répondre, nous allons utiliser les variables *estimated_owners* et *age*. Etant donnée qu'il y a beauoup de limites d'âge, un line chart serait illisible. Nous allons donc changer de visualisation. Un bar chart pourrait être utilisé, mais on ne verrait pas bien toutes les proportions. Une heat map nous paraît donc être le meilleur choix pour concilier grande masse d'informations et lisibilité.
 
 
 ```{r age_ventes}
@@ -326,7 +326,7 @@ Cette constatation va à l'encontre de notre hypothèse, puisque nous pensions q
 Mais ici, on voit qu'à partir de la fourchette 2-5 millions d'acheteurs, près d'un quart des jeux ont une limite d'âge supérieure ou égale à 17 ans. 
 Cela pourrait s'expliquer par le fait que beaucoup de jeux populaires ont cette limite d'âge, comme *Grand Theft Auto V*, *Call of Duty* ou *Red Dead Redemption 2*.
 
-Enfin, nous pouvons voir que la fourchette 50-100 millions n'a que 50% de ses jeux qui n'ont pas de limite d'âge, ce qui est normal, puisque, comme nous l'avons vu dans le tableau de 12 meilleurs jeux, la moitié de ceux composant cette fourchette sont des jeux violents, qui ont donc une limite d'âge élevée : *GTA V*, *HELLDIVERS 2*, *Call of Duty*, *Lost Arc*. Le jeu avec une limite d'âge de 13 ans est *Black Myth: Wukong*. Un des jeux de la fourchette d'acheteurs 50-100M semble d'ailleurs avoir changé de limite d'âge entre le moment où le dataset a été publié et aujourd'hui, puisque PUBG: Battlefields est annoncé sans limite d'âge dans notre dataset, mais sur Steam, il est restraint aux plus de 16 ans. Nous détaillerons les genres qu'ils possèdent dans une prochaine visualisation.
+Enfin, nous pouvons voir que la fourchette 50-100 millions n'a que 50% de ses jeux qui n'ont pas de limite d'âge, ce qui est normal, puisque, comme nous l'avons vu dans le tableau de 12 meilleurs jeux, la moitié de ceux composant cette fourchette sont des jeux violents, qui ont donc une limite d'âge élevée : *GTA V*, *HELLDIVERS 2*, *Call of Duty*, *Lost Arc*. Le jeu avec une limite d'âge de 13 ans est *Black Myth: Wukong*. Un des jeux de la fourchette d'acheteurs 50-100 millions d'acheteurs semble d'ailleurs avoir changé de limite d'âge entre le moment où le dataset a été publié et aujourd'hui, puisque PUBG: Battlefields est annoncé sans limite d'âge dans notre dataset, mais sur Steam, il est restraint aux plus de 16 ans. Nous détaillerons les genres qu'ils possèdent dans une prochaine visualisation.
 
 ## 3ème facteur : les langues supportées
 
@@ -388,7 +388,7 @@ repartition <- bind_rows(
 # On crée notre visualisation
 ggplot(repartition, aes(x = fourchettes_affichage, y = n, fill = supportee)) +
   
-  geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
+  geom_col(position = "fill") + # On rajoute position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
   
   scale_fill_viridis_d() + # On ajoute un système de couleurs adapté aux daltoniens
   
@@ -461,9 +461,9 @@ Cette visualisation nous permet de voir que la proportion de jeux par fourchette
 
 ## 5ème facteur : le système d'exploitation
 
-Un autre facteur peut avoir un rôle important lors de l'achat d'un jeu : le système d'exploitaion. En effet, si une personne possède un Mac et un jeu n'est pas supporté par ce système, il y a peu de chances qu'elle l'achète, à moins de faire une machine virtuelle, ce qui est fastidieux. Inversement pour une personne qui a un ordinateur avec le système Winodws et qui souhaite acheter un jeu soutenu exclusivement par Max.
+Un autre facteur peut avoir un rôle important lors de l'achat d'un jeu : le système d'exploitaion. En effet, si une personne possède un Mac et un jeu n'est pas supporté par ce système, il y a peu de chances qu'elle l'achète, à moins de faire une machine virtuelle, ce qui est fastidieux. Inversement pour une personne qui a un ordinateur avec le système Winodws et qui souhaite acheter un jeu soutenu exclusivement par Mac.
 
-Cela soulève naturellement la question suivante :
+Cela soulève naturellement la question suivante, à laquelle nous allons répondre avec les varibales *estimated_owners*, *windows*, *linux* et *mac* :
 
 #### Est-ce que le système d'exploitation impacte la vente d'un jeu ?
 
@@ -489,7 +489,7 @@ repartition_os <- data_sys_expl %>% summarise(
 # On crée notre visualisation
 ggplot(repartition_os, aes(x = fourchettes_affichage, y = prop, fill = systeme)) +
 
-  geom_col(position = "dodge") + # position = dodge pour avoir les 3 OS côte à côte pour chaque fourchette, avoir un seul graphique au lieu de 3
+  geom_col(position = "dodge") + # On rajoute position = dodge pour avoir les 3 OS côte à côte pour chaque fourchette, avoir un seul graphique au lieu de 3
 
   scale_fill_viridis_d() + # On ajoute un système de couleurs adapté aux daltoniens
 
@@ -516,119 +516,85 @@ Certains jeux tiennent leur réputation de leur studio de développement, comme 
 
 #### Est-ce que le studio de développement impacte la vente d'un jeu ?
 
-Etant donné qu'il existe des centaines de studios de développement et par souci de clareté, nous avons décidé de n'alayser que les plus grands studios, c'est-à-dire ceux qui ont les jeux les plus vendus. Nous allons donc voir quels studios ont développé les 10 jeux de la fourchette 50-100 millios d'acheteurs, et y ajouter les développeurs de *Dota 2* et *Counter Strike 2*.
+Pour répondre à cette question, nous nous servirons des variables *developers* et *estimated_owners*. Etant donné qu'il existe des centaines de studios de développement et par souci de clareté, nous avons décidé de n'analyser que les plus grands studios, c'est-à-dire ceux qui ont les jeux les plus vendus. Nous allons donc voir quels studios ont développé les 10 jeux de la fourchette 50-100 millions d'acheteurs, et y ajouter les studios de développement de *Dota 2* et *Counter Strike 2*.
 
-```{r dev_ventes}
+```{r dev_ventes, fig.width=10, fig.height=8}
 
-# On copie notre jeu pour ne pas l'altérer
-data_dev <- jeu_allege
+# On copie notre jeu pour ne pas l'altérer et on crée une ligne par studio de développement de chaque jeu, pour compter correctement
+data_dev <- jeu_allege %>% unnest(developers)
 
-# Pour éviter d'allourdir le code, on crée notre liste de fourchette hautes
-fourchettes_hautes <- c("50000000 - 100000000", "100000000 - 200000000", "200000000 - 500000000")
+# On crée notre liste de fourchettes hautes
+fourchettes_hautes <- c("50M - 100M", "100M - 200M", "200M - 500M")
 
-# Pour savoir quels sont les studios des jeux les plus vendus, on filtre dans data_dev les developers des 3 fourchettes hautes
+# On filtre dans data_dev les studios de developement des 3 fourchettes choisies
 studios_geants <- data_dev %>%
   filter(fourchettes_affichage %in% fourchettes_hautes) %>%
-  unnest(developers) %>% # On met un studio par ligne pour pouvoir compter correctement
   distinct(developers) # On s'assure qu'il n'y a pas de duplicat de studio
 
 # On réunit les autres studios dans la catégorie "Autres studios"
 data_dev_full <- data_dev %>%
-  unnest(developers) %>%
   mutate(studio = ifelse(developers %in% studios_geants$developers, developers, "Autres studios")) %>%
   filter(!fourchettes_affichage %in% fourchettes_hautes) # On ne garde que les fourchette moyennes et basses, puisqu'on a extirpé les studios des fourchettes hautes
 
-# On calcule la répartition des jeux selon les studios de développement choisis précédemment
-repartition <- data_dev_full %>%
-  count(fourchettes_affichage, studio) %>%
-  group_by(fourchettes_affichage) %>%
-  mutate(prop = n / sum(n)) %>%
-  ungroup()
+# On calcule la répartition des jeux selon les studios de développement choisis précédemment et leur nombre d'acheteurs
+repartition_dev <- data_dev_full %>%
+  count(fourchettes_affichage, studio) %>% # On compte le nombre de jeux pour chaque combinaison fourchette d’acheteurs - studio de développement
+  group_by(fourchettes_affichage) %>% # On regroupe ce décompte par fourchette pour calculer les proportions
+  mutate(prop = n / sum(n)) %>% # On ajoute la variable prop, dans laquelle on stocke la proportion de chaque studio par fourchette
+  ungroup() # On retire la structure groupée
 
 # On crée notre visualisation
-ggplot(repartition, aes(x = fourchettes_affichage, y = prop, fill = studio)) +
+ggplot(repartition_dev, aes(x = fourchettes_affichage, y = prop, fill = studio)) +
   
-  geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
+  geom_col() +
   
   scale_fill_viridis_d() + # On ajoute un système de couleurs adapté aux daltoniens
   
   labs(
-    title = "Répartition des développeurs selon le nombre d'acheteurs",
+    title = "Répartition des studios de développement selon le nombre d'acheteurs",
     x = "Nombre d'acheteurs estimés",
     y = "Proportion de jeux",
-    fill = "Développeurs"
+    fill = "Studio de développement"
   ) + # On ajoute titre, nom des axes et légende
   
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On incline l'axe des x pour pouvoir lire les fourchettes
 
 ```
 
-Ce graphique nous montre que la très grande majorité plupart des jeux achetés proviennent de studios différents de ceux ayant développés les 12 jeux les plus vendus de Steam.
-Cela tend à montrer que le studio de développement n'a pas d'impact sur les ventes d'un jeu.
-Pour en être sûrs, nous allon enlever les studios qui n'ont qu'un très faible portion des répartitions, pour n'avoir que ceux qui ont plus d'0.5% des parts.
-
-```{r zoom_dev_ventes}
-
-# On recalcule notre répartition en s'assurant de ne prendre en compte que l'es studios ayant une part supérieure ou égale à 0.5% des parts de chaque fourchette d'acheteurs
-repartition_clean <- repartition %>%
-  mutate(
-    studio = ifelse(prop <= 0.005, "Autres studios", studio)
-  ) %>%
-  group_by(fourchettes_affichage, studio) %>%
-  summarise(n = sum(n), .groups = "drop") %>%
-  group_by(fourchettes_affichage) %>%
-  mutate(prop = n / sum(n)) %>%
-  ungroup()
-
-# On crée notre visualisation
-ggplot(repartition_clean, aes(x = fourchettes_affichage, y = prop, fill = studio)) +
-  
-  geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
-  
-  scale_fill_viridis_d() + # On ajoute un système de couleurs adapté aux daltoniens
-  
-  labs(
-    title = "Répartition des développeurs selon le nombre d'acheteurs",
-    x = "Nombre d'acheteurs estimés",
-    y = "Proportion de jeux",
-    fill = "Développeur"
-  ) + # On ajoute titre, nom des axes et légende
-  
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On incline l'axe des x pour pouvoir lire les fourchettes
-
-```
-
-Cette visualiation nous permet de voir clairement que parmi les 19 studios de développement cités précédemment, 1 seul parvient à se démarquer : Valve. En effet, sur les 3 plus grandes fourchettes d'acheteurs, Valve représente environ 5% des jeux achetés, ce qui signifie que 5% des jeux ayant entre 5 et 50 millions d'acheteurs ont été développés par Valve.
+Cette visualiation nous permet de voir clairement que parmi les 19 studios de développement qui ont développé les 12 jeux les plus achetés, 1 seul parvient à se démarquer : Valve. En effet, sur les 3 plus grandes fourchettes d'acheteurs, Valve représente environ 5% des jeux achetés, ce qui signifie que 5% des jeux ayant entre 5 et 50 millions d'acheteurs ont été développés par Valve.
 
 Cependant, malgré cette nette démarcation, l'absence d'augmentation réelle et la présence d'un seul studio de développement tend à montrer qu'un studio de développement n'impacte pas la vente d'un jeu.
 
-Comme pour les graphiques précédents, le nombre de genres empêche une bonne lisibilité, nous allons donc retirer ceux qui ne font que gêner la compréhension de la légende.
+## 7ème facteur : le(s) genre(s)
 
+Il arrive souvent que l'on recherche un jeu par genre : un jeu d'actio, d'aventeur, et jeu de course ou de simulation, etc...
+On pourrait donc supposer que certains genres son plus populaires que d'autres, et sont donc plus achetés. C'est pour cela que nous allons répondre à la question suivante, grâce aux variables *estimated_owners* et *genres* :
+
+#### Est-ce que le(s) genre(s) impacte la vente d'un jeu ?
+
+Pour vérifier cela, nous allon utiliser une heta map, pour les mêmes raisons que la limite d'âge. En effet, le grand nombre de genres existant rendraient illisible un bar chart ou un line chart.
 
 ```{r genres_ventes, fig.width=10, fig.height=8}
 
-# On copie notre jeu pour ne pas l'altérer
-data_genre <- jeu_allege %>%
-  unnest(genres) %>%
-  distinct(name, genres, fourchettes_affichage)
+# On copie notre jeu pour ne pas l'altérer et comme pour les studios de développement, on crée une ligne par genre pour chaque jeu
+data_genre <- jeu_allege %>% unnest(genres)
 
+# On calcule la répartition des jeux selon leur(s) genre(s) et leur nombre d'acheteurs
 repartition_genres <- data_genre %>%
-  count(genres, fourchettes_affichage) %>%
-  group_by(fourchettes_affichage) %>%
-  mutate(prop = n / sum(n)) %>%
-  ungroup()
+  count(genres, fourchettes_affichage) %>% # On compte le nombre de jeux pour chaque combinaison fourchette d’acheteurs - genre
+  group_by(fourchettes_affichage) %>% # On regroupe ce décompte par fourchette pour calculer les proportions
+  mutate(prop = n / sum(n)) %>% # On ajoute la variable prop, dans laquelle on stocke la proportion de chaque genre par fourchette
+  ungroup() # On retire la structure groupée
 
+# On crée notre visualisation
 ggplot(repartition_genres, aes(x = fourchettes_affichage, y = genres, fill = prop)) +
 
-  geom_tile() +
+  geom_tile() + # On fait une heat map pour montrer la proportion des jeux pour chaque fourchette d'achetteurs et châque genre
 
-  geom_text(aes(label = round(prop, 3),color = prop < 0.5),size = 3) +
+  geom_text(aes(label = round(prop, 3), color = prop < 0.5), size = 3) + # On ajoute les proportions arrondies à 0,001 sur chaque tile, pour améliorer la lisibilité du graphique
 
-  scale_color_manual(
-    values = c("black", "white"),
-    guide = "none"
-  ) +
-
+  scale_color_manual(values = c("black", "white"), guide = "none") + # On fait en sorte que les proportions soient lisibles malgré le dégradé de couleurs
+  
   scale_fill_viridis_c() + # On ajoute un système de couleurs adapté aux daltoniens
 
   labs(
@@ -638,12 +604,35 @@ ggplot(repartition_genres, aes(x = fourchettes_affichage, y = genres, fill = pro
     fill = "Proportion"
   ) + # On ajoute titre, nom des axes et légende
 
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    axis.text.y = element_text(size = 8)
-  )
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On incline l'axe des x pour pouvoir lire les fourchettes
+  
 
 ```
+Avant de commencer à interpréter cette visualisation, il est important de noter qu'un jeu peut avoir plusieurs genres. Donc, lorsque nous dirons "jeu indé" ou "jeu d'aventure", nous vondrons dire "jeu qui comporte le genré *Inde*" ou "jeu qui comporte le genre *Adventure*".
+
+Cette visualisation nous permet d'obtenir plusieurs informations.
+
+Le première est que les jeux indé représentent près d'un quart des jeux des 5 premières fourchettes, une fois les invendus exclus, ce qui signifie qu'environ 25 % des jeux ayant entre 1 et 500 000 acheteurs sont des jeux indés.
+
+La deuxième est que les jeux d'aventure représentent près de 15 % de tous les jeux, il s'agit du 2ème genre le plus représenté, après le genre Action, qui semble définir plus de 20 % de tous les jeux.
+
+En ce qui concerne l'évolution des proportions au fil des fourchettes, on peut remarquer que la proportion des jeux *Massively Multiplayer* augmente avec le nombre d'acheteurs, tout comme les jeux d'action. Le genre *RPG* lui augmente aussi, mais plus lentement.
+A l'inverse, la proportion de jeux indé et casual baisse avec le nombre de joueurs, tandis que le genre *Adventure* semble stagner.
+
+Toutes ces informations nous font dire que le genre est corrélé au nombre d'acheteurs, et que certains genres populaires poussent le joueurs à acheter les jeux associés. Nous verrons plus tard dans le rapport si cela peut également être lié au nombre d'avis positifs laissés.
+
+Détaillons à présent le paradoxe entre l'âge limite et le genre. Comme nous l'avons vu précédemment, à partir de 2 millions d'acheteurs et jusque 100 millions d'acheteurs, l'âge limite est plus souvent entre 16 et 18 ans que pour les autres fourchettes. Toutefois, lorsque l'on regarde les genres des fourchettes composant cet intervalle, on constate qu'aucun jeu ne comporte *Violent*, *Sexual Content*, *Nudity* ou *Gore*. Pourtant, ce sont ces critères qui sont utilisés pour donner une limite d'âge à un jeu. Après vérification sur la plateforme Steam, nous avons pu constater qu'en effet, ces jeux n'étaient pas catégorisés comme violents ou gores, ce n'était pas une erreur de dataset. On en vient donc à se pose une question : est-ce que les jeux populaires ommettent volontairement de s'inscrire dans ces genres pour booster leur vente ? Pour éviter de trop inquiéter les joueurs, puisqu'il y a déjà une limite d'âge élevée ? Ou parce'on se dit justement que la limite d'âge suffit, et qu'il n'y a pas besoin de rejouter le genre ? 
+
+Cette ommission volontaire pourrait expliquer les chiffres des 2 visualisations concernées (âge limite et genre), et tendrait à confirmer que les genres influencent les ventes, certains en bien, comme les genres *Action*, *Adventure* et *Free To Play*, et d'autres en mal, comme *Violent*, *Nudity* ou *Sexual Content*.
+
+
+## 8ème facteur : la / les catégorie(s)
+
+Certains jeux tiennent leur réputation de leur studio de développement, comme les jeux de Riot Games qui ont suivi League of Legends ou ceux étant paru après OverWatch. Le studio de développement peut donc être un facteur d'impact sur les ventes d'un jeu, ce qui révèle la question suivante : 
+
+#### Est-ce que le studio de développement impacte la vente d'un jeu ?
+
+Etant donné qu'il existe des centaines de studios de développement et par souci de clareté, nous avons décidé de n'analyser que les plus grands studios, c'est-à-dire ceux qui ont les jeux les plus vendus. Nous allons donc voir quels studios ont développé les 10 jeux de la fourchette 50-100 millions d'acheteurs, et y ajouter les studios de développement de *Dota 2* et *Counter Strike 2*.
 
 ```{r categories_ventes, fig.width=10, fig.height=9}
 
