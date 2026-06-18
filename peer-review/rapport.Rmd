@@ -85,11 +85,11 @@ Le fichier contient de nombreuses variables que nous n'allons pas utiliser, tell
 # jeux <- read.csv('../../games_march2025_cleaned.csv')
 
 # On retire les variables non  pertinentes
-# jeux_allege <- jeux %>% select(-c(dlc_count, detailed_description, about_the_game, short_description, reviews, header_image, website, support_url, support_email, metacritic_url, achievements, notes, packages, screenshots, movies, peak_ccu, tags))
+# jeu_allege <- jeux %>% select(-c(dlc_count, detailed_description, about_the_game, short_description, reviews, header_image, website, support_url, support_email, metacritic_url, achievements, notes, packages, screenshots, movies, peak_ccu, tags))
 
 # Ce jeu allégé peut être déposé sur le Git, puisqu'il fait moins de 100Mo.
 # La ligne est mise en commentaire puisque cela a déjà été fait précédemment
-# write.csv(jeux_allege, "../data/jeux_alleges.csv", row.names = FALSE)
+# write.csv(jeu_allege, "../data/jeux_alleges.csv", row.names = FALSE)
 
 ```
 
@@ -98,18 +98,22 @@ Comme nous l'avons vu dans le tableau décrivant chaque donée, certaines d'entr
 ```{r initialisation, message=FALSE, warning=FALSE}
 
 # On récupère les données de notre jeu allégé
-jeux_allege <- read.csv('../data/jeux_alleges.csv')
+jeu_allege <- read.csv('../data/jeux_alleges.csv')
 
-# On transforme les fausses listes en véritables listes (genres, studio de développeurs)
-jeux_allege <- jeux_allege %>% mutate(
+# On transforme les fausses listes en véritables listes (genres, studio de développeurs, langues supportées)
+jeu_allege <- jeu_allege %>% mutate(
   genres = str_remove_all(genres, "\\[|\\]|'"), 
   genres = str_split(genres, ",\\s*"),
+  
   developers = str_remove_all(developers, "\\[|\\]|'"),
-  developers = str_split(developers, ",\\s*")
+  developers = str_split(developers, ",\\s*"),
+
+  supported_languages = str_remove_all(supported_languages, "\\[|\\]|'"),
+  supported_languages = str_split(supported_languages, ",\\s*")
   )
 
 # On transforme les chaînes de caractère "TRUE" et "FALSE" en booléens
-jeux_allege <- jeux_allege %>%
+jeu_allege <- jeu_allege %>%
   mutate(
     windows = as.logical(windows),
     mac     = as.logical(mac),
@@ -117,7 +121,7 @@ jeux_allege <- jeux_allege %>%
   )
 
 # On met les dates au bon format
-jeux_allege$release_date <- as.Date(jeux_allege$release_date)
+jeu_allege$release_date <- as.Date(jeu_allege$release_date)
 
 ```
 
@@ -159,14 +163,14 @@ format_range <- function(x) {
 }
 
 # On récupère toutes les fourchettes distinctes d'acheteurs
-fourchettes_owners <- unique(jeux_allege$estimated_owners) 
+fourchettes_owners <- unique(jeu_allege$estimated_owners) 
 
 # On classe ces fourchettes de la plus basse à la plus haute
 ordre_fourchettes <- fourchettes_owners[
   order(sapply(strsplit(fourchettes_owners, " - "), function(x) as.numeric(x[1])))] # On ordonne les fourchettes grâce à leurs parties numériques
 
 # On formate nos fourchettes dans une nouvelle variable, et on leur applique l'ordre décrit précédemment grâce à la fonction factor
-jeux_allege$fourchettes_affichage <- factor(format_range(jeux_allege$estimated_owners),levels = format_range(ordre_fourchettes))
+jeu_allege$fourchettes_affichage <- factor(format_range(jeu_allege$estimated_owners),levels = format_range(ordre_fourchettes))
 
 ```
 
@@ -175,7 +179,7 @@ Maitenant que nos fourchettes sont dans un format lisible, commençons par regar
 ```{r jeux_acheteurs}
 
 # On crée un tableau permettant de voir combien de jeux sont associés à chaque fourchette
-nb_jeux_owners <- jeux_allege %>% count(fourchettes_affichage) %>%
+nb_jeux_owners <- jeu_allege %>% count(fourchettes_affichage) %>%
   #mutate(`Fourchette d'acheteurs` = format_range(as.character(fourchettes_affichage))) %>%
   select(fourchettes_affichage, `Nombre de jeux` = n)
 
@@ -190,7 +194,7 @@ Regardons quels sont ces 12 jeux.
 
 ```{r top_12_jeux}
 
-top_12_jeux <- jeux_allege %>% 
+top_12_jeux <- jeu_allege %>% 
   filter(fourchettes_affichage == "200M - 500M" | 
          fourchettes_affichage == "100M - 200M" |
         fourchettes_affichage == "50M - 100M") %>%
@@ -217,7 +221,7 @@ Etant donné que nous cherchons à montrer une évolution de la proportion du pr
 ```{r prix_ventes}
 
 # On copie notre jeu pour ne pas l'altérer
-data_date <- jeux_allege
+data_date <- jeu_allege
 
 # On ajoute une variable à data, contenant les fourchettes associées au prix de chaque jeu
 data_date$prix_cat <- cut(data_date$price, # On découpe les prix en intervalles
@@ -238,18 +242,18 @@ repartition_prix <- data_date %>%
   mutate(prop = n / sum(n)) %>% # On ajoute la variable prop, dans laquelle on stocke la proportion de chaque catégorie de prix par fourchette
   ungroup() # On retire la structure groupée
 
-# On crée la visualisation
+# On crée notre visualisation
 ggplot(repartition_prix, aes(x = fourchettes_affichage, y = prop, group = prix_cat, color = prix_cat)) +
   
-  geom_line() + # on fait un line chart pour montrer l'évolution de la proportion
-  geom_point()  + # on met les points pour mieux voir où s'arrête l'évolution
+  geom_line() + # On fait un line chart pour montrer l'évolution de la proportion
+  geom_point()  + # On met les points pour mieux voir où s'arrête l'évolution
 
   labs(
     title = "Répartition des prix selon le nombre d'acheteurs",
     x = "Nombre d'acheteurs",
     y = "Proportion de jeux",
     color = "Prix"
-  ) +
+  ) + # On ajoute titre, nom des axes et légende
   
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On incline l'axe des x pour pouvoir lire les fourchettes
 
@@ -265,68 +269,58 @@ Nous pouvons également voir que la variété des prix diminue avec le nombre d'
 
 Toutes ces observatios nous permette de supposer que le prix a certes un impact sur les ventes, mais d'autres facteurs entrent sûrement en jeu lors de l'achat d'un jeu vidéo.
 
+
 ## 2ème facteur : la limite d'âge
 
-Lorsque l'on achète un jeu, il n'est pas rare qu'une limite d'âge soit affichée, que ce soit pour prévenir de la vulgarité, de la violence ou de la peur que peut provoquer un jeu. Cette limite d'âge peut reprsésenter un frein lors de l'achat d'un jeu, du moins c'est ce que nous aimerions savoir avec la visualisation qui suit, qui nous permettrait de répondre à la question suivante : 
+Lorsque l'on achète un jeu, il n'est pas rare qu'une limite d'âge soit affichée, que ce soit pour prévenir de la vulgarité, de la violence ou de la peur que peut provoquer un jeu. Cette limite d'âge peut reprsésenter un frein lors de l'achat d'un jeu, du moins c'est ce que nous aimerions savoir, grâce à la visualisation qui suit, qui nous permettrait de répondre à la question suivante : 
 
 #### La limite d'âge d'un jeu a-t-elle un impact sur ses ventes ?
 
-Etant donnée qu'il y a beauoup de limite d'âge, un line chart serait illisible. Nous allons donc changer de visualisation. Un bar chart pourrait être utilisé, mais on ne verrait pas bien toutes les proportions. Une heat map nous paraît donc être le meilleur choix pour concilier grande masse d'informations et lisibilité.
+Etant donnée qu'il y a beauoup de limites d'âge, un line chart serait illisible. Nous allons donc changer de visualisation. Un bar chart pourrait être utilisé, mais on ne verrait pas bien toutes les proportions. Une heat map nous paraît donc être le meilleur choix pour concilier grande masse d'informations et lisibilité.
 
 
 ```{r age_ventes}
 
 # On copie notre jeu pour ne pas l'altérer
-data_age <- jeux_allege
+data_age <- jeu_allege
 
 # On trie les jeux dans l'ordre de la limite d'âge la plus basse à la plus haute
-data_age$age_cat <- factor(data_age$required_age, levels = rev(sort(unique(data_age$required_age))))
+data_age$age_cat <- factor(data_age$required_age, levels = sort(unique(data_age$required_age)))
 
-repartition_age <- data_age %>%
-  count(age_cat, fourchettes_affichage) %>%
-  group_by(fourchettes_affichage) %>%
-  mutate(prop = n / sum(n)) %>%
-  ungroup()
+# On calcule la répartition des jeux selon leur âge limite et leur nombre d'acheteurs
+repartition_age <- data_age %>% 
+  count(age_cat, fourchettes_affichage) %>% # On compte le nombre de jeux pour chaque combinaison de fourchette d’acheteurs et d'âge limite
+  group_by(fourchettes_affichage) %>% # On regroupe ce décompte par fourchette pour calculer les proportions
+  mutate(prop = n / sum(n)) %>% # On ajoute la variable prop, dans laquelle on stocke la proportion de chaque catégorie de prix par fourchette
+  ungroup() # On retire la structure groupée
 
-ggplot(repartition_age,
-       aes(x = fourchettes_affichage,
-           y = age_cat,
-           fill = prop)) +
+# On crée notre visualisation
+ggplot(repartition_age, aes(x = fourchettes_affichage, y = age_cat, fill = prop)) +
 
-  geom_tile() +
+  geom_tile() + # On fait une heat map pour montrer la proportion des jeux pour chaque fourchette d'achetteurs et châque limite d'âge
 
-  geom_text(
-    aes(
-      label = round(prop, 3),
-      color = prop < 0.5
-    ),
-    size = 3
-  ) +
+  geom_text(aes(label = round(prop, 3), color = prop < 0.5), size = 3) + # On ajoute les proportions arrondies à 0,001 sur chaque tile, pour améliorer la lisibilité du graphique
 
-  scale_color_manual(
-    values = c("black", "white"),
-    guide = "none"
-  ) +
+  scale_color_manual(values = c("black", "white"), guide = "none") + # On fait en sorte que les proportions soient lisibles malgré le dégradé de couleurs
   
-  scale_fill_viridis_c() + # système de couleurs pour daltoniens
+  scale_fill_viridis_c() + # On ajoute un système de couleurs adapté aux daltoniens
   
   labs(
     title = "Répartition des limites d'âge selon le nombre d'acheteurs",
     x = "Nombre d'acheteurs",
     y = "Âge requis",
     fill = "Proportion"
-  ) +
+  ) + # On ajoute titre, nom des axes et légende
 
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On incline l'axe des x pour pouvoir lire les fourchettes
 
-
 ```
 
-Sur ce graphique, on peut voir qu'il y a au moins un jeu pour lequel la limite d'âge est égale à -1. Une erreur a pu se glisser lors du nettoyage de notre jeu de données, mais dont la proportion est si faible q'eulle n'empêche pas l'analyse du reste des informations.
+Sur ce graphique, on peut voir qu'il y a au moins un jeu pour lequel la limite d'âge est égale à -1. Une erreur a pu se glisser lors du nettoyage de notre jeu de données, mais dont la proportion est si faible qu'elle n'empêche pas l'analyse du reste des informations.
 
-Nous constatons avant tout que la grande majorité des jeux n'ont pas de limite d'âge.
+Nous constatons avant tout que la grande majorité des jeux n'ont pas de limite d'âge (ligne quasiment entièrement jaune sur l'axe 0).
 
-De plus, il semblerait que plus la fourchette d'acheteurs augmente, plus le nombre de jeux avec une limite d'âge élevée augmente.
+De plus, il semblerait que plus la fourchette d'acheteurs augmente, plus la proportion de jeux avec une limite d'âge élevée augmente.
 
 Cette constatation va à l'encontre de notre hypothèse, puisque nous pensions qu'un jeu avec une limite d'âge basse serait accessible à un plus grand nombre de joueurs et donc plus acheté.
 Mais ici, on voit qu'à partir de la fourchette 2-5 millions d'acheteurs, près d'un quart des jeux ont une limite d'âge supérieure ou égale à 17 ans. 
@@ -339,67 +333,63 @@ Un facteur qui pourrait également être déterminant sur les ventes d'un jeu es
 
 #### Y a-t-il une corrélation entre les langues supportées par un jeu et ses ventes ?
 
-```{r langues_ventes}
+Il y a beaucoup de langues différentes, donc il st possible que notre visualisation ne soit pas très lisible. Mais étant donné qu'il s'agit d'une analyse exploratoire du jeu de données, il est important de prendre conscience du nombre de langues supportées. Nous vouslons voir une répartition, donc un bar chart semble être le plus adapté.
+
+```{r langues_ventes, fig.width=14, fig.height=10}
 
 # On copie notre jeu pour ne pas l'altérer
-data_langue <- jeux_allege
+data_langue <- jeu_allege
 
 # On compte le nombre de langues supportées pour chaque jeu
-data_langue$nb_langues <- stringr::str_count(data_langue$supported_languages, ",") + 1
+data_langue$nb_langues <- sapply(data_langue$supported_languages, length)
 
-# On compte combien de jeux ont été vendus par nombre de langues, par fourchette d'acheteurs
-repartition <- data_langue %>% count(nb_langues, fourchettes_affichage)
+# On calcule la répartition des jeux selon leur nombre de langues supportées et leur nombre d'acheteurs
+repartition_langue <- data_langue %>% count(nb_langues, fourchettes_affichage)
 
-# On crée la visualisation
-ggplot(repartition, aes(x = fourchettes_affichage, y = n, fill = factor(nb_langues))) +
+# On crée notre visualisation
+ggplot(repartition_langue, aes(x = fourchettes_affichage, y = n, fill = factor(nb_langues))) +
   
-  geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
+  geom_col(position = "fill") + # On rajoute position = fill pour avoir des proportionnalités, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
   
-  scale_fill_viridis_d() + # système de couleurs pour daltoniens
+  scale_fill_viridis_d() + # On ajoute un système de couleurs adapté aux daltoniens
   
   labs(
     title = "Répartition du nombre de langues supportées selon le nombre d'acheteurs",
     x = "Nombre d'acheteurs estimés",
     y = "Proportion de jeux",
     fill = "Nombre de langues"
-  ) +
+  ) + # On ajoute titre, nom des axes et légende
   
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)) # On incline l'axe des x pour pouvoir lire les fourchettes
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On incline l'axe des x pour pouvoir lire les fourchettes
 
 ```
 
-Ce graphique est illisible, car il y a trop de nombres de langues supportées possibles. Nous allons donc nous concentrer sur langues qui figurent parmi les plus parlées au monde : l'anglais, le chinois, l'arabe, le russe, le français, l'espagnol, le portugais, le japonais et le coréen.
+Comme nous nous en doutions, ce graphique est illisible, car il y a trop de nombres possibles de langues supportées. Nous allons donc nous concentrer sur les langues qui figurent parmi les plus parlées au monde : l'anglais, le chinois, l'arabe, le russe, le français, l'espagnol, le portugais, et 2 langues très parlées dans le monde du jeu vidéo : le japonais et le coréen.
 
 ```{r echantillon_langues_ventes, fig.width=14, fig.height=10}
 
 # On fait la liste des langues que l'on veut analyser
 langues <- c("English", "French", "Spanish", "Russian", "Chinese", "Arabic", "Portuguese", "Japanese", "Korean")
 
-# On compte combien de jeux ont été vendus par langue, par fourchette d'acheteurs
+# On calcule la répartition des jeux selon leur nombre de langues supportées et leur nombre d'acheteurs
 repartition <- bind_rows(
   
    # Pour chaque langue de notre liste...
   lapply(langues, function(langue) {
     
-    # On ajoute une variable pour chaque langue, et on regarde si elle est supportée ou non
-    data_langue %>% mutate(
-        langue = langue,
-        supportee = ifelse(
-          str_detect(supported_languages,
-                     paste0("\\b", langue, "\\b")),
-          "Oui",
-          "Non")) %>% 
+    # On ajoute une variable pour savoir si elle est supportée ou non
+    data_langue %>% mutate(langue = langue, supportee = ifelse(
+          str_detect(as.character(supported_languages), paste0("\\b", langue, "\\b")), "Oui", "Non")) %>% 
       count(langue, fourchettes_affichage, supportee) # On fait la somme des jeux qui supportent chaque langue pour chaque fourchette d'acheteurs
   })
 )
 
-# On crée la visualisation
+# On crée notre visualisation
 ggplot(repartition, aes(x = fourchettes_affichage, y = n, fill = supportee)) +
   
   geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
   
-  scale_fill_viridis_d() + # système de couleurs pour daltoniens
+  scale_fill_viridis_d() + # On ajoute un système de couleurs adapté aux daltoniens
   
   facet_wrap(~ langue) + # On fait une grille de visualisation montrant les 9 langues étudiées
   
@@ -408,16 +398,20 @@ ggplot(repartition, aes(x = fourchettes_affichage, y = n, fill = supportee)) +
     x = "Nombre d'acheteurs estimés",
     y = "Proportion de jeux",
     fill = "Langue supportée ou non"
-  ) +
+  ) + # On ajoute titre, nom des axes et légende
   
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1)) # On incline l'axe des x pour pouvoir lire les fourchettes
 
 ```
 
-Grâce à cette visualisation, nous voyons bien que le nombre de langues supportées est corrélé aux nombre de ventes. En effet, quelle que soit la langue, la proportion de jeux la supportant augmente avec le nombre d'acheteurs.
+Grâce à cette visualisation, nous voyons bien que le nombre de langues supportées est corrélé aux nombre de ventes. En effet, quelle que soit la langue, la proportion de jeux la supportant augmente avec le nombre d'acheteurs. Cela semble logique puique plus un jeu upporte de langues, plus il est accessible à un grand nombre de personnes. 
 
-Nous pouvons également constater que ne supportent pas la langue arabe, ce qui ne les empêche pas d'avoir les meilleures ventes.
+Cependant, il ne sert à rien de supporter toutes les le langues du monde, comme nous l'avon vu avec la visualisation précédente, où la grande majorité des jeux avec 103 langues supportées sont invendus.
+
+On peut également que la fourchette 50-100 millions d'acheteurs fait exception à la tendance, car ses proportion sont plus faibles pour toutes les langues sauf l'arabe.
+
+Nous pouvons également constater que ni Counter Strike 2 ni Dota 2 ne supportent pas la langue arabe, ce qui ne les empêche pas d'avoir les meilleures ventes.
 
 ## 4ème facteur : la date de publication
 
@@ -429,7 +423,7 @@ Une autre observation intéressante de notre jeu de données concerne les variab
 ```{r date_ventes}
 
 # On copie notre jeu pour ne pas l'altérer
-data_date <- jeux_allege
+data_date <- jeu_allege
 
 # On ajoute une colonne pour n'avoir que les mois, au format "Janvier", "Février", etc... au lieu de 01, 02, etc...
 data_date$mois <- factor(
@@ -452,7 +446,7 @@ ggplot(data_date,
     title = "Répartition des jeux selon leur date de sortie et popularité",
     x = "Nombre de propriétaires",
     y = "Date de sortie"
-  ) +
+  ) + # On ajoute titre, nom des axes et légende
   
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1)) # On incline l'axe des x pour pouvoir lire les fourchettes
@@ -472,7 +466,7 @@ Cela soulève naturellement la question suivante :
 ```{r sys_expl_ventes}
 
 # On copie notre jeu pour ne pas l'altérer
-data_sys_expl <- jeux_allege
+data_sys_expl <- jeu_allege
 
 # On calcule la répartition des jeux selon les systèmes d'exploitation supportés
 repartition_os <- data_sys_expl %>%
@@ -489,7 +483,7 @@ repartition_os <- data_sys_expl %>%
   )
 
 
-# On crée la visualisation
+# On crée notre visualisation
 ggplot(repartition_os,
        aes(x = fourchettes_affichage,
            y = prop,
@@ -497,14 +491,14 @@ ggplot(repartition_os,
 
   geom_col(position = "dodge") +
 
-  scale_fill_viridis_d() +
+  scale_fill_viridis_d() + # On ajoute un système de couleurs adapté aux daltoniens
 
   labs(
     title = "Comparaison des OS selon le nombre d'acheteurs",
     x = "Nombre d'acheteurs estimés",
     y = "Proportion de jeux",
     fill = "Système d'exploitation"
-  ) +
+  ) + # On ajoute titre, nom des axes et légende
 
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
@@ -525,7 +519,7 @@ Etant donné qu'il existe des centaines de studios de développement et par souc
 ```{r dev_ventes}
 
 # On copie notre jeu pour ne pas l'altérer
-data_dev <- jeux_allege
+data_dev <- jeu_allege
 
 # Pour éviter d'allourdir le code, on crée notre liste de fourchette hautes
 fourchettes_hautes <- c("50000000 - 100000000", "100000000 - 200000000", "200000000 - 500000000")
@@ -549,19 +543,19 @@ repartition <- data_dev_full %>%
   mutate(prop = n / sum(n)) %>%
   ungroup()
 
-# On crée la visualisation
+# On crée notre visualisation
 ggplot(repartition, aes(x = fourchettes_affichage, y = prop, fill = studio)) +
   
   geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
   
-  scale_fill_viridis_d() + # système de couleurs pour daltoniens
+  scale_fill_viridis_d() + # On ajoute un système de couleurs adapté aux daltoniens
   
   labs(
     title = "Répartition des développeurs selon le nombre d'acheteurs",
     x = "Nombre d'acheteurs estimés",
     y = "Proportion de jeux",
     fill = "Développeurs"
-  ) +
+  ) + # On ajoute titre, nom des axes et légende
   
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On incline l'axe des x pour pouvoir lire les fourchettes
 
@@ -584,19 +578,19 @@ repartition_clean <- repartition %>%
   mutate(prop = n / sum(n)) %>%
   ungroup()
 
-# On crée la visualisation
+# On crée notre visualisation
 ggplot(repartition_clean, aes(x = fourchettes_affichage, y = prop, fill = studio)) +
   
   geom_col(position = "fill") + # On rajoute le position = fill pour avoir des rapports de proportionnalité, et non le nombre précis, pour avoir des barres de même taille et un graphique plus lisible
   
-  scale_fill_viridis_d() + # système de couleurs pour daltoniens
+  scale_fill_viridis_d() + # On ajoute un système de couleurs adapté aux daltoniens
   
   labs(
     title = "Répartition des développeurs selon le nombre d'acheteurs",
     x = "Nombre d'acheteurs estimés",
     y = "Proportion de jeux",
     fill = "Développeur"
-  ) +
+  ) + # On ajoute titre, nom des axes et légende
   
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On incline l'axe des x pour pouvoir lire les fourchettes
 
@@ -612,7 +606,7 @@ Comme pour les graphiques précédents, le nombre de genres empêche une bonne l
 ```{r genres_ventes, fig.width=10, fig.height=8}
 
 # On copie notre jeu pour ne pas l'altérer
-data_genre <- jeux_allege %>%
+data_genre <- jeu_allege %>%
   unnest(genres) %>%
   distinct(name, genres, fourchettes_affichage)
 
@@ -633,14 +627,14 @@ ggplot(repartition_genres, aes(x = fourchettes_affichage, y = genres, fill = pro
     guide = "none"
   ) +
 
-  scale_fill_viridis_c() +
+  scale_fill_viridis_c() + # On ajoute un système de couleurs adapté aux daltoniens
 
   labs(
-    title = "Répartition des genres selon le nombre de propriétaires",
+    title = "Répartition des genres selon le nombre d'e propriétaires'acheteurs",
     x = "Fourchettes d'acheteurs",
     y = "Genre",
     fill = "Proportion"
-  ) +
+  ) + # On ajoute titre, nom des axes et légende
 
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1),
@@ -652,7 +646,7 @@ ggplot(repartition_genres, aes(x = fourchettes_affichage, y = genres, fill = pro
 ```{r categories_ventes, fig.width=10, fig.height=9}
 
 # On copie notre jeu pour ne pas l'altérer
-data_categorie <- jeux_allege %>%
+data_categorie <- jeu_allege %>%
   mutate(categories = str_remove_all(categories, "\\[|\\]|'")) %>%  # enlève [], '
   mutate(categories = str_split(categories, ",\\s*")) %>%   # transforme en liste 
   unnest(categories)
@@ -662,7 +656,7 @@ ggplot(data_categorie,
            y = categories)) +
   geom_jitter() +
   
-  scale_fill_viridis_d() + # système de couleurs pour daltoniens
+  scale_fill_viridis_d() + # On ajoute un système de couleurs adapté aux daltoniens
   
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On incline l'axe des x pour pouvoir lire les fourchettes
 
@@ -690,7 +684,7 @@ Tout d'abord, pour répondre à la question, nous avons exploré le jeu de donn�
 ```{r exploration_prix}
 
 # On ne conserve que les jeux qui ont une note
-reviews_prix <- jeux_allege %>% filter(pct_pos_total > 0)
+reviews_prix <- jeu_allege %>% filter(pct_pos_total > 0)
 
 # Histogramme de la répartition du nombre de jeux en fonction du prix 
 ggplot(reviews_prix, mapping = aes(x = price)) + 
@@ -705,7 +699,7 @@ Regardons maintenant la distribution des notes données aux jeux par tranche de 
 ```{r qualite_prix}
 
 # On ne garde que les jeux possédant une note et dont le prix est inférieur à 70 euros.
-reviews_prix <- jeux_allege %>% filter(pct_pos_total > 0, price < 70)
+reviews_prix <- jeu_allege %>% filter(pct_pos_total > 0, price < 70)
 
 # Graphique présentant la distribution des notes données aux jeux par tranche de prix. (Mettre en relation avec un nuage de points les avis positifs avec les prix rendait le tout illisible.)
 
@@ -725,7 +719,7 @@ On peut s'attendre à ce que le nombre de reviews moyen soit le même pour chaqu
 ```{r nb_reviews_prix}
 
 # Mêmes données que précédemment
-reviews_prix <- jeux_allege %>% filter(pct_pos_total > 0, price < 70)
+reviews_prix <- jeu_allege %>% filter(pct_pos_total > 0, price < 70)
 
 # Graphique présentant la distribution du nombre de reviews des jeux par tranche de prix. 
 
@@ -788,7 +782,7 @@ Tout d'abord, on consulte la répartition des genres disponibles (nombre de revi
 
 ```{r genres}
 # Pour mieux compter les genres
-jeux_genres_separes <- jeux_allege %>% unnest(genres)
+jeux_genres_separes <- jeu_allege %>% unnest(genres)
 
 # On retire les jeux qui n'ont pas de reviews
 jeux_genres_separes <- jeux_genres_separes %>% filter(pct_pos_total > 0, genres != "")
@@ -834,7 +828,7 @@ On a vu précédemment qu'il n'y avait pas beaucoup de jeux du genre RPG mais ce
 
 ```{r genre_time}
 
-jeux_genres_separes <- jeux_allege %>% unnest(genres)
+jeux_genres_separes <- jeu_allege %>% unnest(genres)
 jeux_genres_separes <- jeux_genres_separes %>% filter(average_playtime_forever > 0)
 # On garde uniquement les genres qui concernent + de 50 jeux (n'a pas de sens d'évaluer la moyenne sur un petit échantillon)
 genres_valides <- jeux_genres_separes %>% count(genres) %>% filter(n >= 50) %>% pull(genres)
