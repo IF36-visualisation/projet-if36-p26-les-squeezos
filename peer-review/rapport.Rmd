@@ -324,9 +324,9 @@ De plus, il semblerait que plus la fourchette d'acheteurs augmente, plus la prop
 
 Cette constatation va à l'encontre de notre hypothèse, puisque nous pensions qu'un jeu avec une limite d'âge basse serait accessible à un plus grand nombre de joueurs et donc plus acheté.
 Mais ici, on voit qu'à partir de la fourchette 2-5 millions d'acheteurs, près d'un quart des jeux ont une limite d'âge supérieure ou égale à 17 ans. 
-Cela pourrait s'expliquer par le fait que beaucoup de jeux populaires ont cette limite d'âge, comme Grand Theft Auto V, Call of Duty ou Red Dead Redemption 2.
+Cela pourrait s'expliquer par le fait que beaucoup de jeux populaires ont cette limite d'âge, comme *Grand Theft Auto V*, *Call of Duty* ou *Red Dead Redemption 2*.
 
-Enfin, nous pouvons voir que la fourchette 50-100 millions n'a que 50% de ses jeux qui n'ont pas de limite d'âge, ce qui est normal, puisque, comme nous l'avons vu dans le tableau de 12 meilleurs jeux, la moitié de ceux composant cette fourchette sont des jeux violents, qui ont donc une limite d'âge élevée : GTA V, HELLDIVERS 2, Call of Duty, Lost Arc. Le jeu avec une limite d'âge de 13 ans est Black Myth: Wukong. Un des jeux de la fourchette d'acheteurs 50-100M semble d'ailleurs avoir changé de limite d'âge entre le moment où le dataset a été publié et aujourd'hui, puisque PUBG: Battlefields est annoncé sans limite d'âge dans notre dataset, mais sur Steam, il est restraint aux plus de 16 ans. Nous détaillerons les genres qu'ils possèdent dans une prochaine visualisation.
+Enfin, nous pouvons voir que la fourchette 50-100 millions n'a que 50% de ses jeux qui n'ont pas de limite d'âge, ce qui est normal, puisque, comme nous l'avons vu dans le tableau de 12 meilleurs jeux, la moitié de ceux composant cette fourchette sont des jeux violents, qui ont donc une limite d'âge élevée : *GTA V*, *HELLDIVERS 2*, *Call of Duty*, *Lost Arc*. Le jeu avec une limite d'âge de 13 ans est *Black Myth: Wukong*. Un des jeux de la fourchette d'acheteurs 50-100M semble d'ailleurs avoir changé de limite d'âge entre le moment où le dataset a été publié et aujourd'hui, puisque PUBG: Battlefields est annoncé sans limite d'âge dans notre dataset, mais sur Steam, il est restraint aux plus de 16 ans. Nous détaillerons les genres qu'ils possèdent dans une prochaine visualisation.
 
 ## 3ème facteur : les langues supportées
 
@@ -412,7 +412,7 @@ Cependant, il ne sert à rien de supporter toutes les le langues du monde, comme
 
 On peut également voir que la fourchette 50-100 millions d'acheteurs fait exception à la tendance, car ses proportions sont plus faibles pour toutes les langues sauf l'arabe.
 
-Enfin nous pouvons constater que ni Counter Strike 2 ni Dota 2 ne supportent pas la langue arabe, ce qui ne les empêche pas d'avoir les meilleures ventes.
+Enfin nous pouvons constater que ni *Counter Strike 2* ni *Dota 2* ne supportent pas la langue arabe, ce qui ne les empêche pas d'avoir les meilleures ventes.
 
 ## 4ème facteur : la date de publication
 
@@ -474,28 +474,22 @@ Puisque nous allons montrer une répartition, nous allons utiliser un bar chart.
 # On copie notre jeu pour ne pas l'altérer
 data_sys_expl <- jeu_allege
 
-# On calcule la répartition des jeux selon les systèmes d'exploitation supportés
-repartition_os <- data_sys_expl %>%
-  summarise(
-    windows = mean(windows),
-    mac     = mean(mac),
-    linux   = mean(linux),
-    .by = fourchettes_affichage
-) %>%
-  pivot_longer(
-    cols = c(windows, mac, linux),
-    names_to = "systeme",
-    values_to = "prop"
+# On calcule la répartition des jeux selon les systèmes d'exploitation supportés et leur nombre d'acheteurs
+repartition_os <- data_sys_expl %>% summarise(
+  windows = mean(windows), # proportion de jeux Windows (TRUE = 1, FALSE = 0)
+  mac     = mean(mac), # proportion de jeux Mac (TRUE = 1, FALSE = 0)
+  linux   = mean(linux), # proportion de jeux Linux (TRUE = 1, FALSE = 0)
+  .by = fourchettes_affichage # On regroupe ces proportions par fourchette d'acheteurs
+) %>% pivot_longer( # On met chaque OS en colonne, pour avoir une ligne par fourchette
+  cols = c(windows, mac, linux),
+  names_to = "systeme",
+  values_to = "prop"
   )
 
-
 # On crée notre visualisation
-ggplot(repartition_os,
-       aes(x = fourchettes_affichage,
-           y = prop,
-           fill = systeme)) +
+ggplot(repartition_os, aes(x = fourchettes_affichage, y = prop, fill = systeme)) +
 
-  geom_col(position = "dodge") +
+  geom_col(position = "dodge") + # position = dodge pour avoir les 3 OS côte à côte pour chaque fourchette, avoir un seul graphique au lieu de 3
 
   scale_fill_viridis_d() + # On ajoute un système de couleurs adapté aux daltoniens
 
@@ -506,13 +500,15 @@ ggplot(repartition_os,
     fill = "Système d'exploitation"
   ) + # On ajoute titre, nom des axes et légende
 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On incline l'axe des x pour pouvoir lire les fourchettes
 
 ```
 
 Cette visualiation nous permet de voir clairement que la proportion de jeux soutenus par les 3 systèmes d'exploitation augmente avec les fourchettes d'acheteurs. On peut donc en déduire que les ventes d'un jeu ont un lien avec le ou les systèmes d'exploitation qui le soutiennent.
 
-On peut également remarquer que Windows soutient tous les jeux qui ont des acheteurs.
+On peut également remarquer que Windows soutient tous les jeux de Steam, et que Linux en soutient le moins.
+
+Et enfin, on peut voir que, comme pour les visualisations précédentes (sauf les mois),la fourchette de 50-100 millions d'acheteurs fait exception à la tendance, puisque seulement un de ses jeux est soutenu par Mac et Linus en plus de Windows. Il s'agit de *Unturned*.
 
 ## 6ème facteur : le studio de développement
 
@@ -520,7 +516,7 @@ Certains jeux tiennent leur réputation de leur studio de développement, comme 
 
 #### Est-ce que le studio de développement impacte la vente d'un jeu ?
 
-Etant donné qu'il existe des centaines de studios de développement et par souci de clareté, nous avons décidé de n'alayser que les plus grands studios, c'est-à-dire ceux qui ont les jeux les plus vendus. Nous allons donc voir quels studios ont développé les 10 jeux de la fourchette 50-100 millios d'acheteurs, et y ajouter les développeurs de Dota 2 et Counter Strike 2.
+Etant donné qu'il existe des centaines de studios de développement et par souci de clareté, nous avons décidé de n'alayser que les plus grands studios, c'est-à-dire ceux qui ont les jeux les plus vendus. Nous allons donc voir quels studios ont développé les 10 jeux de la fourchette 50-100 millios d'acheteurs, et y ajouter les développeurs de *Dota 2* et *Counter Strike 2*.
 
 ```{r dev_ventes}
 
