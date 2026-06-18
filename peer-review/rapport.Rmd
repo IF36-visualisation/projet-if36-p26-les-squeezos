@@ -17,7 +17,7 @@ library(tidyverse)
 
 # Introduction
 
-Notre jeu de données regroupe une grande partie des jeux publiés par Steam, avec de nombreuses informations comme le prix, le système d’exploitation, la date de publication, etc… (voir tableau ci-dessous).
+Notre jeu de données regroupe tous les jeux publiés sur Steam jusque mars 2025, avec de nombreuses informations comme le prix, le système d’exploitation, la date de publication, etc… (voir tableau ci-dessous).
 
 | Catégorie - sous-groupe          | Variable                 | Format | Type     |
 |:--------------------------------:|:------------------------:|:------:|:--------:|
@@ -73,13 +73,13 @@ Notre jeu de données regroupe une grande partie des jeux publiés par Steam, av
 Les données proviennentt du site Kaggle. Nous avons choisi ce jeu en particulier pour sa richesse (89618 observations et 47 variables) et pour sa récence (les données datent de mars 2025).
 Étant tous des joueurs dans le groupe, cela nous paraît intéressant de voir les données concernant nos jeux préférés.
 
-Pour avoir une cohérence dans nore exploration, nous avons décidé de la diviser en deux sections : les potentiels facteurs impactant les ventes d'un jeu et la qualité d'un jeu selon différentes variables.
+Pour avoir une cohérence dans notre exploration, nous avons décidé de la diviser en deux sections : les potentiels facteurs impactant les ventes d'un jeu et la qualité d'un jeu selon différentes variables.
 
-Le fichier contient de nombreuses variables que nous n'allons pas utiliser, telle que les descriptions ou les liens vers le support du jeu ou des vidéos prises. Pour la rapidité de calcul et la légèreté du fichier, nous allons les supprimer de notre jeu de données. La sélection a été faite après avoir réalisé la plupart de nos visualisations, pour nous assurer de garder les variables nécessaires à notre rapport.
+Le dataset contient de nombreuses variables que nous n'allons pas utiliser, telles que les descriptions, les liens vers le support du jeu ou des vidéos prises en jouant. Pour la rapidité de calcul et la légèreté du fichier, nous allons les supprimer de notre jeu de données. La sélection a été faite après avoir réalisé la plupart de nos visualisations, pour nous assurer de garder les variables nécessaires à notre rapport.
 
 ```{r allegement, message=FALSE, warning=FALSE}
 
-# Ce qui se trouve dans ce chunk a déjà été réalisé au préalable mais nous tenions à l'inclure das le rapport pour expliciter notre démarche
+# Ce qui se trouve dans ce chunk a déjà été réalisé au préalable, mais nous tenions à l'inclure das le rapport pour expliciter notre démarche
 
 # Le fichier originel étant trop lourd pour GitHub, il n'est pas dans le dossier partagé, mais sur nos ordinateurs, d'où le '../..' au lieu de '../data'
 # jeux <- read.csv('../../games_march2025_cleaned.csv')
@@ -87,13 +87,12 @@ Le fichier contient de nombreuses variables que nous n'allons pas utiliser, tell
 # On retire les variables non  pertinentes
 # jeu_allege <- jeux %>% select(-c(dlc_count, detailed_description, about_the_game, short_description, reviews, header_image, website, support_url, support_email, metacritic_url, achievements, notes, packages, screenshots, movies, peak_ccu, tags))
 
-# Ce jeu allégé peut être déposé sur le Git, puisqu'il fait moins de 100Mo.
-# La ligne est mise en commentaire puisque cela a déjà été fait précédemment
+# Ce jeu allégé peut être déposé sur GitHub, puisqu'il fait moins de 100Mo.
 # write.csv(jeu_allege, "../data/jeux_alleges.csv", row.names = FALSE)
 
 ```
 
-Comme nous l'avons vu dans le tableau décrivant chaque donée, certaines d'entre elles ne sont pas du bon format d'après RStudio, comme *realease_date* et les différents systèmes d'exploitaion, qui sont tous des chaînes de caractère alors qu'ils devraient être respectivement des dates et des booléens. De plus, les genres, les studios de développement et les catégories, que nous allons utiliser par la suite, sont également considérés comme des chaînes de caractère, alors que ce sont des listes. Il faut donc corriger cela. 
+Comme nous l'avons vu dans le tableau décrivant chaque donée, certaines d'entre elles ne sont pas du bon format d'après RStudio, comme *realease_date* et les différents systèmes d'exploitaion, qui sont tous des chaînes de caractère alors qu'ils devraient être respectivement des dates et des booléens. De plus, les genres, les studios de développement et les langues supportées, que nous allons utiliser par la suite, sont également considérés comme des chaînes de caractère, alors que ce sont des listes. Il faut donc corriger cela. 
 
 ```{r initialisation, message=FALSE, warning=FALSE}
 
@@ -104,6 +103,9 @@ jeu_allege <- read.csv('../data/jeux_alleges.csv')
 jeu_allege <- jeu_allege %>% mutate(
   genres = str_remove_all(genres, "\\[|\\]|'"), 
   genres = str_split(genres, ",\\s*"),
+  
+  categories = str_remove_all(categories, "\\[|\\]|'"),
+  categories = str_split(categories, ",\\s*"), 
   
   developers = str_remove_all(developers, "\\[|\\]|'"),
   developers = str_split(developers, ",\\s*"),
@@ -127,14 +129,14 @@ jeu_allege$release_date <- as.Date(jeu_allege$release_date)
 
 Maintenant que notre jeu de données est pleinement exploitable, il est temps de l'explorer.
 
-# Y a-t-il des facteurs qui augmentent le nombre de ventes d'un jeu ?
+# Y a-t-il des facteurs qui impactent les ventes d'un jeu ?
 
 Pour répondre à notre problématique principale, nous allons utiliser la variable *estimated_owners*.
-Cette variable est une chaîne de caractère et une fourchette d'entiers. Actuellement, on peut y voir "100000 - 200000" ou "200000000 - 500000000", ce qui n'est pas très lisible sur une visualisation. Il faut donc formater ces chaînes de caractère, et les mettre dans le bon ordre, pour avoir sur nos graphiques les fourchettes de la plus petite à la plus grande.
+Cette variable est une chaîne de caractère représentant une fourchette d'entiers. Actuellement, on peut y voir "100000 - 200000" ou "200000000 - 500000000", ce qui n'est pas très lisible sur une visualisation. Il faut donc formater ces chaînes de caractère, et les mettre dans le bon ordre, pour avoir sur nos graphiques les fourchettes de la plus petite à la plus grande.
 
 ```{r formatage_fourchettes}
 
-# On formatte les nombres pour passer de "10000000" à "10M"
+# On formate les nombres pour passer de "10000000" à "10M"
 format_number <- function(n) {
   if (n >= 1e6) { 
     paste0(round(n / 1e6, 1), "M") # Si le nombre est au moins 1 million, on le remplace par "...M"
@@ -147,17 +149,17 @@ format_number <- function(n) {
   }
 }
 
-# On formatte les intervalles d'acheteurs pour passer de "10000000 - 20000000" à "10M - 20M"
+# On formate les intervalles d'acheteurs pour passer de "10000000 - 20000000" à "10M - 20M"
 format_range <- function(x) {
   
   sapply(strsplit(x, " - "), function(parts) { # Pour chaque intervalle, on divise la chaîne de caractère en 2 parties
     
     parts <- as.numeric(parts) # On convertit ces 2 parties en nombre
     
-    paste0( # On créée une nouvelle chaîne contenant :
-      format_number(parts[1]), # Le nombre bas de la fourchette formatté avec la fonction "format_number",
+    paste0( # On crée une nouvelle chaîne contenant :
+      format_number(parts[1]), # Le nombre bas de la fourchette formaté avec la fonction "format_number",
       " - ", # La chaîne de caractère permettant de séparer les deux extrémités de la fourchette
-      format_number(parts[2]) # Et le nombre haut de la fourchette formatté avec la fonction "format_number"
+      format_number(parts[2]) # Et le nombre haut de la fourchette formaté avec la fonction "format_number"
     )
   })
 }
@@ -165,9 +167,8 @@ format_range <- function(x) {
 # On récupère toutes les fourchettes distinctes d'acheteurs
 fourchettes_owners <- unique(jeu_allege$estimated_owners) 
 
-# On classe ces fourchettes de la plus basse à la plus haute
-ordre_fourchettes <- fourchettes_owners[
-  order(sapply(strsplit(fourchettes_owners, " - "), function(x) as.numeric(x[1])))] # On ordonne les fourchettes grâce à leurs parties numériques
+# On classe ces fourchettes de la plus basse à la plus haute grâce à leurs parties numériques
+ordre_fourchettes <- fourchettes_owners[order(sapply(strsplit(fourchettes_owners, " - "), function(x) as.numeric(x[1])))]
 
 # On formate nos fourchettes dans une nouvelle variable, et on leur applique l'ordre décrit précédemment grâce à la fonction factor
 jeu_allege$fourchettes_affichage <- factor(format_range(jeu_allege$estimated_owners),levels = format_range(ordre_fourchettes))
@@ -179,9 +180,7 @@ Maitenant que nos fourchettes sont dans un format lisible, commençons par regar
 ```{r jeux_acheteurs}
 
 # On crée un tableau permettant de voir combien de jeux sont associés à chaque fourchette
-nb_jeux_owners <- jeu_allege %>% count(fourchettes_affichage) %>%
-  #mutate(`Fourchette d'acheteurs` = format_range(as.character(fourchettes_affichage))) %>%
-  select(fourchettes_affichage, `Nombre de jeux` = n)
+nb_jeux_owners <- jeu_allege %>% count(fourchettes_affichage) %>% select(fourchettes_affichage, `Nombre de jeux` = n)
 
 # On affiche ce tableau
 nb_jeux_owners
@@ -194,13 +193,14 @@ Regardons quels sont ces 12 jeux.
 
 ```{r top_12_jeux}
 
+# On filtre les jeux pour n'avoir que ceux qui appartiennent aux 3 dernière fourchettes
 top_12_jeux <- jeu_allege %>% 
   filter(fourchettes_affichage == "200M - 500M" | 
          fourchettes_affichage == "100M - 200M" |
         fourchettes_affichage == "50M - 100M") %>%
   select(name, fourchettes_affichage)
 
-# On affiche ce tableau
+# On affiche ces jeux
 top_12_jeux
 
 ```
@@ -211,7 +211,7 @@ Maintenant que nous avons ces informations, nous pouvons voir le premier facteur
 
 ## 1er facteur : le prix
 
-L'un des premiers facteurs qui nous vient à l'esprit serait le prix, nous allons donc observer les variables *price* et *estimated_owners* pour répondre à la question suivante :
+L'un des premiers facteurs qui nous vient à l'esprit est le prix, nous allons donc observer les variables *price* et *estimated_owners* pour répondre à la question suivante :
 
 #### Y a-t-il une corrélation entre le prix d'un jeu et ses ventes ?
 
@@ -265,18 +265,18 @@ Fait plus étonnant, le nombre de jeux de plus de 30$ augmente également avec l
 
 Nous pouvons également constater que la gratuité ne fait pas la vente, puisque plus de près de 87% des jeux invendus sont gratuits. Cela peut être dû à une mauvais réputation, un manque de publicité ou des images peu attrayantes.
 
-Nous pouvons également voir que la variété des prix diminue avec le nombre d'acheteurs. Plus les tranches sont élevées, moins il y a de fourchettes de prix différentes. Je ne vois pas d'explication à ce phénomène.
+Nous pouvons également voir que la variété des prix diminue avec le nombre d'acheteurs. Plus les tranches sont élevées, moins il y a de fourchettes de prix différentes. Nous ne voyons pas d'explication à ce phénomène.
 
 Toutes ces observatios nous permette de supposer que le prix a certes un impact sur les ventes, mais d'autres facteurs entrent sûrement en jeu lors de l'achat d'un jeu vidéo.
 
 
 ## 2ème facteur : la limite d'âge
 
-Lorsque l'on achète un jeu, il n'est pas rare qu'une limite d'âge soit affichée, que ce soit pour prévenir de la vulgarité, de la violence ou de la peur que peut provoquer un jeu. Cette limite d'âge peut reprsésenter un frein lors de l'achat d'un jeu, du moins c'est ce que nous aimerions savoir, grâce à la visualisation qui suit, qui nous permettrait de répondre à la question suivante : 
+Lorsque l'on achète un jeu, il n'est pas rare qu'une limite d'âge soit affichée, que ce soit pour prévenir de la vulgarité, de la violence ou de la peur que peut provoquer un jeu, le fameux PEGI. Cette limite d'âge peut représenter un frein lors de l'achat d'un jeu, du moins c'est ce que nous aimerions savoir, grâce à la visualisation qui suit, qui nous permettrait de répondre à la question suivante : 
 
 #### La limite d'âge d'un jeu a-t-elle un impact sur ses ventes ?
 
-Pour y répondre, nous allons utiliser les variables *estimated_owners* et *age*. Etant donnée qu'il y a beauoup de limites d'âge, un line chart serait illisible. Nous allons donc changer de visualisation. Un bar chart pourrait être utilisé, mais on ne verrait pas bien toutes les proportions. Une heat map nous paraît donc être le meilleur choix pour concilier grande masse d'informations et lisibilité.
+Pour y répondre, nous allons utiliser les variables *estimated_owners* et *age*. Etant donné qu'il y a beauoup de limites d'âge, un line chart serait illisible. Nous allons donc changer de visualisation. Un bar chart pourrait être utilisé, mais on ne verrait pas bien toutes les proportions. Une heat map nous paraît donc être le meilleur choix pour concilier grande masse d'informations et lisibilité.
 
 
 ```{r age_ventes}
@@ -297,7 +297,7 @@ repartition_age <- data_age %>%
 # On crée notre visualisation
 ggplot(repartition_age, aes(x = fourchettes_affichage, y = age_cat, fill = prop)) +
 
-  geom_tile() + # On fait une heat map pour montrer la proportion des jeux pour chaque fourchette d'achetteurs et châque limite d'âge
+  geom_tile() + # On fait une heat map pour montrer la proportion des jeux pour chaque fourchette d'acheteurs et chaque limite d'âge
 
   geom_text(aes(label = round(prop, 3), color = prop < 0.5), size = 3) + # On ajoute les proportions arrondies à 0,001 sur chaque tile, pour améliorer la lisibilité du graphique
 
@@ -308,7 +308,7 @@ ggplot(repartition_age, aes(x = fourchettes_affichage, y = age_cat, fill = prop)
   labs(
     title = "Répartition des limites d'âge selon le nombre d'acheteurs",
     x = "Nombre d'acheteurs",
-    y = "Âge requis",
+    y = "Âge limite",
     fill = "Proportion"
   ) + # On ajoute titre, nom des axes et légende
 
@@ -326,15 +326,15 @@ Cette constatation va à l'encontre de notre hypothèse, puisque nous pensions q
 Mais ici, on voit qu'à partir de la fourchette 2-5 millions d'acheteurs, près d'un quart des jeux ont une limite d'âge supérieure ou égale à 17 ans. 
 Cela pourrait s'expliquer par le fait que beaucoup de jeux populaires ont cette limite d'âge, comme *Grand Theft Auto V*, *Call of Duty* ou *Red Dead Redemption 2*.
 
-Enfin, nous pouvons voir que la fourchette 50-100 millions n'a que 50% de ses jeux qui n'ont pas de limite d'âge, ce qui est normal, puisque, comme nous l'avons vu dans le tableau de 12 meilleurs jeux, la moitié de ceux composant cette fourchette sont des jeux violents, qui ont donc une limite d'âge élevée : *GTA V*, *HELLDIVERS 2*, *Call of Duty*, *Lost Arc*. Le jeu avec une limite d'âge de 13 ans est *Black Myth: Wukong*. Un des jeux de la fourchette d'acheteurs 50-100 millions d'acheteurs semble d'ailleurs avoir changé de limite d'âge entre le moment où le dataset a été publié et aujourd'hui, puisque PUBG: Battlefields est annoncé sans limite d'âge dans notre dataset, mais sur Steam, il est restraint aux plus de 16 ans. Nous détaillerons les genres qu'ils possèdent dans une prochaine visualisation.
+Enfin, nous pouvons voir que la fourchette 50-100 millions d'acheteurs n'a que 50% de ses jeux qui n'ont pas de limite d'âge, ce qui est normal, puisque, comme nous l'avons vu dans le tableau des 12 jeux les plus vendus, la moitié de ceux composant cette fourchette sont des jeux violents, qui ont donc une limite d'âge élevée : *GTA V*, *HELLDIVERS 2*, *Call of Duty*, *Lost Arc*. Le jeu avec une limite d'âge de 13 ans est *Black Myth: Wukong*. Un des jeux de la fourchette d'acheteurs 50-100 millions d'acheteurs semble d'ailleurs avoir changé de limite d'âge entre le moment où le dataset a été publié et aujourd'hui, puisque *PUBG: Battlefields* est annoncé sans limite d'âge dans notre dataset, mais sur Steam, il est restraint aux plus de 16 ans. Nous détaillerons les genres qu'ils possèdent dans une prochaine visualisation.
 
 ## 3ème facteur : les langues supportées
 
-Un facteur qui pourrait également être déterminant sur les ventes d'un jeu est le nombre de langues supportées. Nous allons donc mettre en relation les variables *supported_language* et *estimated_owners* pour répondre à la question :
+Un facteur qui pourrait également être déterminant pour les ventes d'un jeu est le nombre de langues supportées. Nous allons donc mettre en relation les variables *supported_language* et *estimated_owners* pour répondre à la question :
 
 #### Y a-t-il une corrélation entre les langues supportées par un jeu et ses ventes ?
 
-Il y a beaucoup de langues différentes, donc il st possible que notre visualisation ne soit pas très lisible. Mais étant donné qu'il s'agit d'une analyse exploratoire du jeu de données, il est important de prendre conscience du nombre de langues supportées. Nous vouslons voir une répartition, donc un bar chart semble être le plus adapté.
+Il y a beaucoup de langues différentes, donc il est possible que notre visualisation ne soit pas très lisible. Mais étant donné qu'il s'agit d'une analyse exploratoire du jeu de données, il est important de prendre conscience du nombre de langues supportées. Nous voulons voir une répartition, donc un bar chart semble être le plus adapté.
 
 ```{r langues_ventes, fig.width=14, fig.height=10}
 
@@ -406,22 +406,21 @@ ggplot(repartition, aes(x = fourchettes_affichage, y = n, fill = supportee)) +
 
 ```
 
-Grâce à cette visualisation, nous voyons bien que le nombre de langues supportées est corrélé aux nombre de ventes. En effet, quelle que soit la langue, la proportion de jeux la supportant augmente avec le nombre d'acheteurs. Cela semble logique puique plus un jeu upporte de langues, plus il est accessible à un grand nombre de personnes. 
+Grâce à cette visualisation, nous voyons bien que le nombre de langues supportées est corrélé aux nombre de ventes. En effet, quelle que soit la langue, la proportion de jeux la supportant augmente avec le nombre d'acheteurs. Cela semble logique puisque plus un jeu supporte de langues, plus il est accessible à un grand nombre de personnes. 
 
-Cependant, il ne sert à rien de supporter toutes les le langues du monde, comme nous l'avon vu avec la visualisation précédente, où la grande majorité des jeux avec 103 langues supportées sont invendus.
+Cependant, il ne sert à rien de supporter toutes les langues du monde, comme nous l'avons vu avec la visualisation précédente, où la grande majorité des jeux avec 103 langues supportées sont invendus.
 
 On peut également voir que la fourchette 50-100 millions d'acheteurs fait exception à la tendance, car ses proportions sont plus faibles pour toutes les langues sauf l'arabe.
 
-Enfin nous pouvons constater que ni *Counter Strike 2* ni *Dota 2* ne supportent pas la langue arabe, ce qui ne les empêche pas d'avoir les meilleures ventes.
+Enfin nous pouvons constater que ni *Counter Strike 2* ni *Dota 2* ne supportent la langue arabe, ce qui ne les empêche pas d'avoir les meilleures ventes.
 
 ## 4ème facteur : la date de publication
 
-Si nous voulons observer l'impact de différents facteurs sur les ventes d'un jeu, nous pouvons prendre les dates de publication. En effet, il serait intéressant de voir si les nombre de ventes d'un jeu varie selon l'année ou le mois de publication. Nous allons donc mettre en relation les colonnes
-Une autre observation intéressante de notre jeu de données concerne les variables *release_date* et *estimated_owners* pour répondre à la question :
+Si nous voulons observer l'impact de différents facteurs sur les ventes d'un jeu, nous pouvons prendre les dates de publication. En effet, il serait intéressant de voir si les nombre de ventes d'un jeu varie selon le mois de publication. Nous allons donc mettre en relation les variables *release_date* et *estimated_owners* pour répondre à la question :
 
 #### Y a-t-il une corrélation entre le mois de publication d'un jeu et ses ventes ?
 
-Le but ici est de voir si, par exmple, plus de monde achète un jeu paru en novembre, juste avant les fêtes, ou en juillet, au début des grandes vacances.
+Le but ici est de voir si, par exemple, plus de monde achète un jeu paru en novembre, juste avant les fêtes, ou en juillet, au début des grandes vacances.
 
 Etant donné qu'on veut voir une évolution au cours du temps, un line chart semble être la visualisation la plus appropriée.
 
@@ -444,7 +443,7 @@ repartition_date <- data_date %>%
 ggplot(repartition_date, aes(x = mois, y = prop, color = fourchettes_affichage, group = fourchettes_affichage)) +
   
   geom_line() + # On fait un line chart pour montrer l'évolution de la proportion
-  geom_point() +# On met les points pour mieux voir où s'arrête l'évolution
+  geom_point() + # On met les points pour mieux voir où s'arrête l'évolution
 
   labs(
     title = "Répartition des jeux par mois selon les fourchettes d’acheteurs",
@@ -457,7 +456,7 @@ ggplot(repartition_date, aes(x = mois, y = prop, color = fourchettes_affichage, 
 
 ```
 
-Cette visualisation nous permet de voir que la proportion de jeux par fourchette d'acheteur ne varie pas ou très peu selon le mois de publication. Le mois de publication n'est donc pas un facteur impactant les ventes d'un jeu.
+Cette visualisation nous permet de voir que la proportion de jeux par fourchette d'acheteurs ne varie pas ou très peu selon le mois de publication. Le mois de publication n'est donc pas un facteur impactant les ventes d'un jeu.
 
 ## 5ème facteur : le système d'exploitation
 
@@ -508,7 +507,7 @@ Cette visualiation nous permet de voir clairement que la proportion de jeux sout
 
 On peut également remarquer que Windows soutient tous les jeux de Steam, et que Linux en soutient le moins.
 
-Et enfin, on peut voir que, comme pour les visualisations précédentes (sauf les mois),la fourchette de 50-100 millions d'acheteurs fait exception à la tendance, puisque seulement un de ses jeux est soutenu par Mac et Linus en plus de Windows. Il s'agit de *Unturned*.
+Et enfin, on peut voir que, comme pour les visualisations précédentes (sauf les mois), la fourchette de 50-100 millions d'acheteurs fait exception à la tendance, puisque seulement un de ses jeux est soutenu par Mac et Linux en plus de Windows. Il s'agit de *Unturned*.
 
 ## 6ème facteur : le studio de développement
 
@@ -516,7 +515,7 @@ Certains jeux tiennent leur réputation de leur studio de développement, comme 
 
 #### Est-ce que le studio de développement impacte la vente d'un jeu ?
 
-Pour répondre à cette question, nous nous servirons des variables *developers* et *estimated_owners*. Etant donné qu'il existe des centaines de studios de développement et par souci de clareté, nous avons décidé de n'analyser que les plus grands studios, c'est-à-dire ceux qui ont les jeux les plus vendus. Nous allons donc voir quels studios ont développé les 10 jeux de la fourchette 50-100 millions d'acheteurs, et y ajouter les studios de développement de *Dota 2* et *Counter Strike 2*.
+Pour répondre à cette question, nous nous servirons des variables *developers* et *estimated_owners*. Etant donné qu'il existe des centaines de studios de développement et par souci de clareté, nous avons décidé de n'analyser que les plus grands studios, c'est-à-dire ceux qui ont développé les jeux les plus vendus. Nous allons donc voir quels studios ont développé les 10 jeux de la fourchette 50-100 millions d'acheteurs, et y ajouter les studios de développement de *Dota 2* et *Counter Strike 2*.
 
 ```{r dev_ventes, fig.width=10, fig.height=8}
 
@@ -563,16 +562,16 @@ ggplot(repartition_dev, aes(x = fourchettes_affichage, y = prop, fill = studio))
 
 Cette visualiation nous permet de voir clairement que parmi les 19 studios de développement qui ont développé les 12 jeux les plus achetés, 1 seul parvient à se démarquer : Valve. En effet, sur les 3 plus grandes fourchettes d'acheteurs, Valve représente environ 5% des jeux achetés, ce qui signifie que 5% des jeux ayant entre 5 et 50 millions d'acheteurs ont été développés par Valve.
 
-Cependant, malgré cette nette démarcation, l'absence d'augmentation réelle et la présence d'un seul studio de développement tend à montrer qu'un studio de développement n'impacte pas la vente d'un jeu.
+Cependant, malgré cette nette démarcation, l'absence d'augmentation réelle et la présence visible d'un seul studio de développement tend à montrer qu'un studio de développement n'impacte pas la vente d'un jeu.
 
 ## 7ème facteur : le(s) genre(s)
 
-Il arrive souvent que l'on recherche un jeu par genre : un jeu d'actio, d'aventeur, et jeu de course ou de simulation, etc...
-On pourrait donc supposer que certains genres son plus populaires que d'autres, et sont donc plus achetés. C'est pour cela que nous allons répondre à la question suivante, grâce aux variables *estimated_owners* et *genres* :
+Il arrive souvent que l'on recherche un jeu par genre : un jeu d'action, d'aventure, de course, de simulation, etc...
+On pourrait donc supposer que certains genres sont plus populaires que d'autres, et sont donc plus achetés. C'est pour cela que nous allons répondre à la question suivante, grâce aux variables *estimated_owners* et *genres* :
 
 #### Est-ce que le(s) genre(s) impacte la vente d'un jeu ?
 
-Pour vérifier cela, nous allon utiliser une heta map, pour les mêmes raisons que la limite d'âge. En effet, le grand nombre de genres existant rendraient illisible un bar chart ou un line chart.
+Pour vérifier cela, nous allons utiliser une heat map, pour les mêmes raisons que la limite d'âge. En effet, le grand nombre de genres existant rendraient illisible un bar chart ou un line chart.
 
 ```{r genres_ventes, fig.width=10, fig.height=8}
 
@@ -589,7 +588,7 @@ repartition_genres <- data_genre %>%
 # On crée notre visualisation
 ggplot(repartition_genres, aes(x = fourchettes_affichage, y = genres, fill = prop)) +
 
-  geom_tile() + # On fait une heat map pour montrer la proportion des jeux pour chaque fourchette d'achetteurs et châque genre
+  geom_tile() + # On fait une heat map pour montrer la proportion des jeux pour chaque fourchette d'acheteurs et chaque genre
 
   geom_text(aes(label = round(prop, 3), color = prop < 0.5), size = 3) + # On ajoute les proportions arrondies à 0,001 sur chaque tile, pour améliorer la lisibilité du graphique
 
@@ -608,56 +607,31 @@ ggplot(repartition_genres, aes(x = fourchettes_affichage, y = genres, fill = pro
   
 
 ```
-Avant de commencer à interpréter cette visualisation, il est important de noter qu'un jeu peut avoir plusieurs genres. Donc, lorsque nous dirons "jeu indé" ou "jeu d'aventure", nous vondrons dire "jeu qui comporte le genré *Inde*" ou "jeu qui comporte le genre *Adventure*".
+Avant de commencer à interpréter cette visualisation, il est important de noter qu'un jeu peut avoir plusieurs genres. Donc, lorsque nous dirons "jeu indé" ou "jeu d'aventure", nous vondrons dire "jeu qui comporte le genre *Inde*" ou "jeu qui comporte le genre *Adventure*".
 
 Cette visualisation nous permet d'obtenir plusieurs informations.
 
-Le première est que les jeux indé représentent près d'un quart des jeux des 5 premières fourchettes, une fois les invendus exclus, ce qui signifie qu'environ 25 % des jeux ayant entre 1 et 500 000 acheteurs sont des jeux indés.
+La première est que les jeux indés représentent près d'un quart des jeux des 5 premières fourchettes, une fois les invendus exclus, ce qui signifie qu'environ 25 % des jeux ayant entre 1 et 500 000 acheteurs sont des jeux indés.
 
-La deuxième est que les jeux d'aventure représentent près de 15 % de tous les jeux, il s'agit du 2ème genre le plus représenté, après le genre Action, qui semble définir plus de 20 % de tous les jeux.
+La deuxième est que les jeux d'aventure représentent près de 15 % de tous les jeux, il s'agit du 2ème genre le plus représenté, après le genre *Action*, qui semble définir plus de 20 % de tous les jeux.
 
-En ce qui concerne l'évolution des proportions au fil des fourchettes, on peut remarquer que la proportion des jeux *Massively Multiplayer* augmente avec le nombre d'acheteurs, tout comme les jeux d'action. Le genre *RPG* lui augmente aussi, mais plus lentement.
-A l'inverse, la proportion de jeux indé et casual baisse avec le nombre de joueurs, tandis que le genre *Adventure* semble stagner.
+En ce qui concerne l'évolution des proportions au fil des fourchettes, on peut remarquer que la proportion des jeux *Massively Multiplayer* augmente avec le nombre d'acheteurs, tout comme les jeux d'action. Le genre *RPG* augmente aussi, mais plus légèrement.
+A l'inverse, la proportion de jeux indés et casual baisse avec le nombre de joueurs, tandis que le genre *Adventure* semble stagner.
 
-Toutes ces informations nous font dire que le genre est corrélé au nombre d'acheteurs, et que certains genres populaires poussent le joueurs à acheter les jeux associés. Nous verrons plus tard dans le rapport si cela peut également être lié au nombre d'avis positifs laissés.
+Toutes ces informations nous font dire que le genre est corrélé au nombre d'acheteurs, et que certains genres populaires poussent les joueurs à acheter les jeux associés. Nous verrons plus tard dans le rapport si cela peut également être lié au nombre d'avis positifs laissés.
 
-Détaillons à présent le paradoxe entre l'âge limite et le genre. Comme nous l'avons vu précédemment, à partir de 2 millions d'acheteurs et jusque 100 millions d'acheteurs, l'âge limite est plus souvent entre 16 et 18 ans que pour les autres fourchettes. Toutefois, lorsque l'on regarde les genres des fourchettes composant cet intervalle, on constate qu'aucun jeu ne comporte *Violent*, *Sexual Content*, *Nudity* ou *Gore*. Pourtant, ce sont ces critères qui sont utilisés pour donner une limite d'âge à un jeu. Après vérification sur la plateforme Steam, nous avons pu constater qu'en effet, ces jeux n'étaient pas catégorisés comme violents ou gores, ce n'était pas une erreur de dataset. On en vient donc à se pose une question : est-ce que les jeux populaires ommettent volontairement de s'inscrire dans ces genres pour booster leur vente ? Pour éviter de trop inquiéter les joueurs, puisqu'il y a déjà une limite d'âge élevée ? Ou parce'on se dit justement que la limite d'âge suffit, et qu'il n'y a pas besoin de rejouter le genre ? 
+Détaillons à présent le paradoxe entre l'âge limite et le genre. Comme nous l'avons vu précédemment, à partir de 2 millions d'acheteurs et jusque 100 millions d'acheteurs, l'âge limite est plus souvent entre 16 et 18 ans que pour les autres fourchettes. Toutefois, lorsque l'on regarde les genres des fourchettes composant cet intervalle, on constate qu'aucun jeu ne comporte *Violent*, *Sexual Content*, *Nudity* ou *Gore*. Pourtant, ce sont ces critères qui sont utilisés pour donner une limite d'âge à un jeu. Après vérification sur la plateforme Steam, nous avons pu constater qu'en effet, ces jeux n'étaient pas catégorisés comme violents ou gores, ce n'était pas une erreur de dataset. On en vient donc à se pose une question : est-ce que les jeux populaires omettent volontairement de s'inscrire dans ces genres pour booster leurs ventes ? Pour éviter de trop inquiéter les joueurs, puisqu'il y a déjà une limite d'âge élevée ? Ou parce qu'on se dit justement que la limite d'âge suffit, et qu'il n'y a pas besoin d'expliciter le genre ? 
 
-Cette ommission volontaire pourrait expliquer les chiffres des 2 visualisations concernées (âge limite et genre), et tendrait à confirmer que les genres influencent les ventes, certains en bien, comme les genres *Action*, *Adventure* et *Free To Play*, et d'autres en mal, comme *Violent*, *Nudity* ou *Sexual Content*.
+Cette omission volontaire pourrait expliquer les chiffres des 2 visualisations concernées (âge limite et genre), et tendrait à confirmer que les genres influencent les ventes, certains en bien, *Action*, *Adventure* et *Free To Play*, et d'autres en mal, comme *Violent*, *Nudity* ou *Sexual Content* puisque Steam retire ces genres des jeux les plus achetés.
 
-
-## 8ème facteur : la / les catégorie(s)
-
-Certains jeux tiennent leur réputation de leur studio de développement, comme les jeux de Riot Games qui ont suivi League of Legends ou ceux étant paru après OverWatch. Le studio de développement peut donc être un facteur d'impact sur les ventes d'un jeu, ce qui révèle la question suivante : 
-
-#### Est-ce que le studio de développement impacte la vente d'un jeu ?
-
-Etant donné qu'il existe des centaines de studios de développement et par souci de clareté, nous avons décidé de n'analyser que les plus grands studios, c'est-à-dire ceux qui ont les jeux les plus vendus. Nous allons donc voir quels studios ont développé les 10 jeux de la fourchette 50-100 millions d'acheteurs, et y ajouter les studios de développement de *Dota 2* et *Counter Strike 2*.
-
-```{r categories_ventes, fig.width=10, fig.height=9}
-
-# On copie notre jeu pour ne pas l'altérer
-data_categorie <- jeu_allege %>%
-  mutate(categories = str_remove_all(categories, "\\[|\\]|'")) %>%  # enlève [], '
-  mutate(categories = str_split(categories, ",\\s*")) %>%   # transforme en liste 
-  unnest(categories)
-
-ggplot(data_categorie,
-       aes(x = fourchettes_affichage,
-           y = categories)) +
-  geom_jitter() +
-  
-  scale_fill_viridis_d() + # On ajoute un système de couleurs adapté aux daltoniens
-  
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On incline l'axe des x pour pouvoir lire les fourchettes
-
-```
 
 ## Conclusion
 
-Grâce à toutes ces visualisations, nous avons pu constater que plusieurs facteurs peuvent avoir un impact sur la vente d'un jeu. Le prix reste l'un des facteurs primordiaux, mais les langues supportées semblent également un rôle important lors de l'achat d'un jeu.
+Grâce à toutes ces visualisations, nous avons pu constater que plusieurs facteurs peuvent avoir un effet sur les ventes d'un jeu. Les genres semblent avoir le plus d'impact, mais le prix et les langues supportées semblent également jouer un rôle important lors de l'achat d'un jeu.
 
-A noter que, sur toutes les visualisations de cette section, la fourchette 20 millions - 50 millions présente un anomalie : à chaque fois, elle suit la tendance inverse des fourchettes précédentes, quel que soit le facteur étudié.
+A noter que, sur certaines visualisations de cette section, la fourchette 50 millions - 100 millions d'acheteurs présente une différence avec les autres fourchettes : elle suit la tendance inverse des fourchettes précédentes, notamment pour les facteurs langues supportées, système d'exploitation et âge limite. Malgré nos recherches, nous n'avons pas trouvé comment expliquer ce phénomène.
+
+
 
 
 Afin de poursuivre notre analyse du dataset de jeux vidéos, nous nous efforcerons d'essayer de répondre à la question suivante : 
