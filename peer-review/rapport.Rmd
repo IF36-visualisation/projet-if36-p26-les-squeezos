@@ -237,7 +237,7 @@ data_date$prix_cat <- factor(data_date$prix_cat, levels = rev(ordre_prix))
 
 # On calcule la répartition des jeux selon leur catégorie de prix et leur nombre d'acheteurs
 repartition_prix <- data_date %>%
-  count(fourchettes_affichage, prix_cat) %>% # On compte le nombre de jeux pour chaque combinaison de fourchette d’acheteurs et de catégorie de prix
+  count(fourchettes_affichage, prix_cat) %>% # On compte le nombre de jeux pour chaque combinaison fourchette d’acheteurs - catégorie de prix
   group_by(fourchettes_affichage) %>% # On regroupe ce décompte par fourchette pour calculer les proportions
   mutate(prop = n / sum(n)) %>% # On ajoute la variable prop, dans laquelle on stocke la proportion de chaque catégorie de prix par fourchette
   ungroup() # On retire la structure groupée
@@ -289,9 +289,9 @@ data_age$age_cat <- factor(data_age$required_age, levels = sort(unique(data_age$
 
 # On calcule la répartition des jeux selon leur âge limite et leur nombre d'acheteurs
 repartition_age <- data_age %>% 
-  count(age_cat, fourchettes_affichage) %>% # On compte le nombre de jeux pour chaque combinaison de fourchette d’acheteurs et d'âge limite
+  count(age_cat, fourchettes_affichage) %>% # On compte le nombre de jeux pour chaque combinaison fourchette d’acheteurs - âge limite
   group_by(fourchettes_affichage) %>% # On regroupe ce décompte par fourchette pour calculer les proportions
-  mutate(prop = n / sum(n)) %>% # On ajoute la variable prop, dans laquelle on stocke la proportion de chaque catégorie de prix par fourchette
+  mutate(prop = n / sum(n)) %>% # On ajoute la variable prop, dans laquelle on stocke la proportion de chaque âge limite par fourchette
   ungroup() # On retire la structure groupée
 
 # On crée notre visualisation
@@ -326,6 +326,7 @@ Cette constatation va à l'encontre de notre hypothèse, puisque nous pensions q
 Mais ici, on voit qu'à partir de la fourchette 2-5 millions d'acheteurs, près d'un quart des jeux ont une limite d'âge supérieure ou égale à 17 ans. 
 Cela pourrait s'expliquer par le fait que beaucoup de jeux populaires ont cette limite d'âge, comme Grand Theft Auto V, Call of Duty ou Red Dead Redemption 2.
 
+Enfin, nous pouvons voir que la fourchette 50-100 millions n'a que 50% de ses jeux qui n'ont pas de limite d'âge, ce qui est normal, puisque, comme nous l'avons vu dans le tableau de 12 meilleurs jeux, la moitié de ceux composant cette fourchette sont des jeux violents, qui ont donc une limite d'âge élevée : GTA V, HELLDIVERS 2, Call of Duty, Lost Arc. Le jeu avec une limite d'âge de 13 ans est Black Myth: Wukong. Un des jeux de la fourchette d'acheteurs 50-100M semble d'ailleurs avoir changé de limite d'âge entre le moment où le dataset a été publié et aujourd'hui, puisque PUBG: Battlefields est annoncé sans limite d'âge dans notre dataset, mais sur Steam, il est restraint aux plus de 16 ans. Nous détaillerons les genres qu'ils possèdent dans une prochaine visualisation.
 
 ## 3ème facteur : les langues supportées
 
@@ -409,59 +410,64 @@ Grâce à cette visualisation, nous voyons bien que le nombre de langues support
 
 Cependant, il ne sert à rien de supporter toutes les le langues du monde, comme nous l'avon vu avec la visualisation précédente, où la grande majorité des jeux avec 103 langues supportées sont invendus.
 
-On peut également que la fourchette 50-100 millions d'acheteurs fait exception à la tendance, car ses proportion sont plus faibles pour toutes les langues sauf l'arabe.
+On peut également voir que la fourchette 50-100 millions d'acheteurs fait exception à la tendance, car ses proportions sont plus faibles pour toutes les langues sauf l'arabe.
 
-Nous pouvons également constater que ni Counter Strike 2 ni Dota 2 ne supportent pas la langue arabe, ce qui ne les empêche pas d'avoir les meilleures ventes.
+Enfin nous pouvons constater que ni Counter Strike 2 ni Dota 2 ne supportent pas la langue arabe, ce qui ne les empêche pas d'avoir les meilleures ventes.
 
 ## 4ème facteur : la date de publication
 
 Si nous voulons observer l'impact de différents facteurs sur les ventes d'un jeu, nous pouvons prendre les dates de publication. En effet, il serait intéressant de voir si les nombre de ventes d'un jeu varie selon l'année ou le mois de publication. Nous allons donc mettre en relation les colonnes
 Une autre observation intéressante de notre jeu de données concerne les variables *release_date* et *estimated_owners* pour répondre à la question :
 
-#### Y a-t-il une corrélation entre la date de publication d'un jeu et ses ventes ?
+#### Y a-t-il une corrélation entre le mois de publication d'un jeu et ses ventes ?
+
+Le but ici est de voir si, par exmple, plus de monde achète un jeu paru en novembre, juste avant les fêtes, ou en juillet, au début des grandes vacances.
+
+Etant donné qu'on veut voir une évolution au cours du temps, un line chart semble être la visualisation la plus appropriée.
 
 ```{r date_ventes}
 
 # On copie notre jeu pour ne pas l'altérer
 data_date <- jeu_allege
 
-# On ajoute une colonne pour n'avoir que les mois, au format "Janvier", "Février", etc... au lieu de 01, 02, etc...
-data_date$mois <- factor(
-  format(data_date$release_date, "%m"),
-  levels = sprintf("%02d", 1:12),
-  labels = c(
-    "Janvier", "Février", "Mars", "Avril",
-    "Mai", "Juin", "Juillet", "Août",
-    "Septembre", "Octobre", "Novembre", "Décembre"
-  )
-)
+# On ajoute une colonne pour n'avoir que les mois, au format "Janvier", "Février", etc... au lieu de 01, 02, etc... 
+data_date$mois <- factor(format(data_date$release_date, "%m"), levels = sprintf("%02d", 1:12), labels = c( "Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre" ))
 
-ggplot(data_date,
-       aes(x = fourchettes_affichage,
-           y = mois)) +
+# On calcule la répartition des jeux selon leur mois de publication et leur nombre d'acheteurs
+repartition_date <- data_date %>%
+  count(mois, fourchettes_affichage) %>% # On compte le nombre de jeux pour chaque combinaison fourchette d’acheteurs - mois
+  group_by(mois) %>% # On regroupe ce décompte par fourchette pour calculer les proportions
+  mutate(prop = n / sum(n)) %>%  # On ajoute la variable prop, dans laquelle on stocke la proportion de chaque mois par fourchette
+  ungroup() # On retire la structure groupée
 
-  geom_jitter(height = 0.2, alpha = 0.2) +
+# On crée notre visualisation
+ggplot(repartition_date, aes(x = mois, y = prop, color = fourchettes_affichage, group = fourchettes_affichage)) +
+  
+  geom_line() + # On fait un line chart pour montrer l'évolution de la proportion
+  geom_point() +# On met les points pour mieux voir où s'arrête l'évolution
 
   labs(
-    title = "Répartition des jeux selon leur date de sortie et popularité",
-    x = "Nombre de propriétaires",
-    y = "Date de sortie"
+    title = "Répartition des jeux par mois selon les fourchettes d’acheteurs",
+    x = "Mois",
+    y = "Proportion de jeux",
+    color = "Fourchette d’acheteurs"
   ) + # On ajoute titre, nom des axes et légende
   
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)) # On incline l'axe des x pour pouvoir lire les fourchettes
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # On incline l'axe des x pour pouvoir lire les fourchettes
 
 ```
 
-Cette visualisation ne nous permet pas de conclure quoi que ce soit, puisque la proportion de jeux par fourchette d'acheteur ne varie pas ou très peu selon le mois de publication.
+Cette visualisation nous permet de voir que la proportion de jeux par fourchette d'acheteur ne varie pas ou très peu selon le mois de publication. Le mois de publication n'est donc pas un facteur impactant les ventes d'un jeu.
 
 ## 5ème facteur : le système d'exploitation
 
-Un autre facteur peut avoir un rôle important lors de l'achat d'un jeu : le système d'exploitaion. En effet, si une personne a un Mac et qu'un jeu n'est pas supporté par ce système, il y a peu de chances qu'elle l'achète, à moins de faire une machine virtuelle, ce qui est fastidieux. Inversement pour une personne qui a un ordinateur avec le système Winodws et qui souhaite acheter un jeu soutenu exclusivement par Max.
+Un autre facteur peut avoir un rôle important lors de l'achat d'un jeu : le système d'exploitaion. En effet, si une personne possède un Mac et un jeu n'est pas supporté par ce système, il y a peu de chances qu'elle l'achète, à moins de faire une machine virtuelle, ce qui est fastidieux. Inversement pour une personne qui a un ordinateur avec le système Winodws et qui souhaite acheter un jeu soutenu exclusivement par Max.
 
 Cela soulève naturellement la question suivante :
 
 #### Est-ce que le système d'exploitation impacte la vente d'un jeu ?
+
+Puisque nous allons montrer une répartition, nous allons utiliser un bar chart.
 
 ```{r sys_expl_ventes}
 
